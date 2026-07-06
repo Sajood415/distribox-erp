@@ -2,6 +2,7 @@ import { getCompanyPrisma } from "../db/init";
 import { calcLineNet, calcLineVat, roundMoney } from "../utils/money";
 import { increaseStock } from "./stock";
 import { postPurchaseJournal } from "./accounting";
+import { getPurchaseInvoiceOutstanding } from "../domain/vendor-outstanding";
 
 function success(data) {
   return { success: true, data };
@@ -72,12 +73,15 @@ export async function listPurchaseInvoices() {
       items: { include: { product: true } },
     },
   });
-  return success(
-    data.map((invoice) => ({
-      ...invoice,
-      outstanding: roundMoney(invoice.total - invoice.paidAmount),
-    }))
-  );
+
+  const rows = [];
+  for (const invoice of data) {
+    const outstanding = invoice.isCredit
+      ? await getPurchaseInvoiceOutstanding(prisma, invoice)
+      : 0;
+    rows.push({ ...invoice, outstanding });
+  }
+  return success(rows);
 }
 
 export async function getPurchaseInvoice(id) {

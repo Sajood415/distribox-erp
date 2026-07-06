@@ -6,6 +6,11 @@ import { startScheduler, stopScheduler } from "./scheduler/scheduler";
 
 const isDev = !app.isPackaged;
 
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+}
+
 function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 1280,
@@ -39,6 +44,8 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  if (!gotSingleInstanceLock) return;
+
   await initDatabase();
   registerIpcHandlers();
   startScheduler();

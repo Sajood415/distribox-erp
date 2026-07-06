@@ -65,27 +65,45 @@ function getProjectRoot() {
   return join(app.getAppPath());
 }
 
-function runPrismaCommand(args, databaseUrl) {
+function pauseSync(ms) {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    /* spin */
+  }
+}
+
+function runPrismaCommand(args, databaseUrl, { retries = 5 } = {}) {
   const projectRoot = getProjectRoot();
   const prismaCli = join(projectRoot, "node_modules", "prisma", "build", "index.js");
-  const result = spawnSync(process.execPath, [prismaCli, ...args], {
-    cwd: projectRoot,
-    env: {
-      ...process.env,
-      ELECTRON_RUN_AS_NODE: "1",
-      MASTER_DATABASE_URL: databaseUrl,
-      COMPANY_DATABASE_URL: databaseUrl,
-    },
-    stdio: "pipe",
-    encoding: "utf-8",
-  });
 
-  if (result.status !== 0) {
+  for (let attempt = 0; attempt < retries; attempt += 1) {
+    const result = spawnSync(process.execPath, [prismaCli, ...args], {
+      cwd: projectRoot,
+      env: {
+        ...process.env,
+        ELECTRON_RUN_AS_NODE: "1",
+        MASTER_DATABASE_URL: databaseUrl,
+        COMPANY_DATABASE_URL: databaseUrl,
+      },
+      stdio: "pipe",
+      encoding: "utf-8",
+    });
+
+    if (result.status === 0) {
+      return result.stdout;
+    }
+
     const message = [result.stderr, result.stdout].filter(Boolean).join("\n") || "Prisma command failed";
+    const locked = /database is locked/i.test(message);
+    if (locked && attempt < retries - 1) {
+      pauseSync(250 * (attempt + 1));
+      continue;
+    }
+
     throw new Error(message);
   }
 
-  return result.stdout;
+  throw new Error("Prisma command failed after retries");
 }
 
 function runMigrateDeploy(schemaFile, databaseUrl) {

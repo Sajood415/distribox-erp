@@ -8,6 +8,7 @@ import {
   getInvoiceOutstanding,
   sumSalesReturns,
 } from "../domain/customer-outstanding";
+import { getPurchaseInvoiceOutstanding } from "../domain/vendor-outstanding";
 import {
   findJournalLinesInRange,
   findJournalLinesCumulative,
@@ -464,17 +465,23 @@ export async function getPurchaseReport(payload = {}) {
     orderBy: { date: "desc" },
   });
 
-  const rows = invoices.map((invoice) => ({
-    number: invoice.number,
-    date: invoice.date,
-    vendor: invoice.vendor.name,
-    subtotal: invoice.subtotal,
-    taxTotal: invoice.taxTotal,
-    total: invoice.total,
-    paidAmount: invoice.paidAmount,
-    outstanding: roundMoney(invoice.total - invoice.paidAmount),
-    isCredit: invoice.isCredit,
-  }));
+  const rows = [];
+  for (const invoice of invoices) {
+    const outstanding = invoice.isCredit
+      ? await getPurchaseInvoiceOutstanding(prisma, invoice)
+      : 0;
+    rows.push({
+      number: invoice.number,
+      date: invoice.date,
+      vendor: invoice.vendor.name,
+      subtotal: invoice.subtotal,
+      taxTotal: invoice.taxTotal,
+      total: invoice.total,
+      paidAmount: invoice.paidAmount,
+      outstanding,
+      isCredit: invoice.isCredit,
+    });
+  }
 
   const vendorMap = new Map();
   for (const invoice of invoices) {
