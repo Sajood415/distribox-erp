@@ -1,0 +1,538 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/@prisma/company-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("COMPANY_DATABASE_URL")
+}
+
+model Unit {
+  id              Int              @id @default(autoincrement())
+  name            String
+  code            String           @unique
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  products        Product[]
+  purchaseItems   PurchaseItem[]
+  quotationItems  QuotationItem[]
+  salesItems      SalesItem[]
+}
+
+model Warehouse {
+  id                Int                @id @default(autoincrement())
+  name              String
+  address           String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  stock             Stock[]
+  purchaseInvoices  PurchaseInvoice[]
+  purchaseReturns   PurchaseReturn[]
+  salesInvoices     SalesInvoice[]
+  salesReturns      SalesReturn[]
+  claims            Claim[]
+  stockAdjustments  StockAdjustment[]
+  transfersFrom     StockTransfer[]    @relation("TransferFrom")
+  transfersTo       StockTransfer[]    @relation("TransferTo")
+}
+
+model Account {
+  id        Int          @id @default(autoincrement())
+  code      String       @unique
+  name      String
+  type      String
+  parentId  Int?
+  parent    Account?     @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children  Account[]    @relation("AccountHierarchy")
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  customers Customer[]
+  vendors   Vendor[]
+  ledgerLines LedgerLine[]
+}
+
+model Route {
+  id        Int        @id @default(autoincrement())
+  name      String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  customers Customer[]
+}
+
+model Salesman {
+  id              Int                @id @default(autoincrement())
+  name            String
+  commissionRate  Float              @default(0)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  customers       Customer[]
+  quotations      Quotation[]
+  salesInvoices   SalesInvoice[]
+  recoveryVouchers RecoveryVoucher[]
+  claims          Claim[]
+}
+
+model DeliveryMan {
+  id              Int                @id @default(autoincrement())
+  name            String
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  salesInvoices   SalesInvoice[]
+  loadSlips       LoadSlip[]
+  recoveryVouchers RecoveryVoucher[]
+}
+
+model Product {
+  id              Int                @id @default(autoincrement())
+  code            String             @unique
+  name            String
+  brand           String?
+  category        String?
+  baseUnitId      Int
+  baseUnit        Unit               @relation(fields: [baseUnitId], references: [id])
+  packSize        Int                @default(1)
+  price1          Float              @default(0)
+  price2          Float?
+  price3          Float?
+  costPrice       Float              @default(0)
+  vatPercent      Float              @default(0)
+  reorderLevel    Float              @default(0)
+  expireDays      Int?
+  haltOnExpiry    Boolean            @default(false)
+  active          Boolean            @default(true)
+  barCode         String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  stock               Stock[]
+  purchaseItems       PurchaseItem[]
+  purchaseReturnItems PurchaseReturnItem[]
+  quotationItems      QuotationItem[]
+  salesItems          SalesItem[]
+  salesReturnItems    SalesReturnItem[]
+  claimItems          ClaimItem[]
+  stockAdjustments    StockAdjustment[]
+  stockTransferItems  StockTransferItem[]
+}
+
+model Stock {
+  id          Int       @id @default(autoincrement())
+  productId   Int
+  product     Product   @relation(fields: [productId], references: [id])
+  warehouseId Int
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  batchNo     String?
+  expiryDate  DateTime?
+  quantity    Float     @default(0)
+  costPerUnit Float     @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([productId, warehouseId])
+}
+
+model PurchaseInvoice {
+  id          Int            @id @default(autoincrement())
+  number      String         @unique
+  date        DateTime
+  vendorId    Int
+  vendor      Vendor         @relation(fields: [vendorId], references: [id])
+  warehouseId Int
+  warehouse   Warehouse      @relation(fields: [warehouseId], references: [id])
+  isCredit    Boolean        @default(true)
+  freight     Float          @default(0)
+  taxTotal    Float          @default(0)
+  subtotal    Float          @default(0)
+  total       Float          @default(0)
+  paidAmount  Float          @default(0)
+  remarks     String?
+  items       PurchaseItem[]
+  claims      Claim[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model PurchaseItem {
+  id                Int             @id @default(autoincrement())
+  purchaseInvoiceId Int
+  purchaseInvoice   PurchaseInvoice @relation(fields: [purchaseInvoiceId], references: [id], onDelete: Cascade)
+  productId         Int
+  product           Product         @relation(fields: [productId], references: [id])
+  unitId            Int
+  unit              Unit            @relation(fields: [unitId], references: [id])
+  batchNo           String?
+  expiryDate        DateTime?
+  quantity          Float
+  freeQuantity      Float           @default(0)
+  price             Float
+  discount          Float           @default(0)
+  vatPercent        Float           @default(0)
+  lineTotal         Float
+}
+
+model PurchaseReturn {
+  id                Int                  @id @default(autoincrement())
+  number            String               @unique
+  date              DateTime
+  vendorId          Int
+  vendor            Vendor               @relation(fields: [vendorId], references: [id])
+  warehouseId       Int
+  warehouse         Warehouse            @relation(fields: [warehouseId], references: [id])
+  purchaseInvoiceId Int?
+  subtotal          Float                @default(0)
+  taxTotal          Float                @default(0)
+  total             Float                @default(0)
+  remarks           String?
+  items             PurchaseReturnItem[]
+  claim             Claim?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+}
+
+model PurchaseReturnItem {
+  id               Int            @id @default(autoincrement())
+  purchaseReturnId Int
+  purchaseReturn   PurchaseReturn @relation(fields: [purchaseReturnId], references: [id], onDelete: Cascade)
+  productId        Int
+  product          Product        @relation(fields: [productId], references: [id])
+  unitId           Int
+  quantity         Float
+  price            Float
+  discount         Float          @default(0)
+  vatPercent       Float          @default(0)
+  lineTotal        Float
+}
+
+model JournalEntry {
+  id          Int          @id @default(autoincrement())
+  date        DateTime
+  description String
+  reference   String?
+  sourceType  String       @default("System")
+  lines       LedgerLine[]
+  voucher     Voucher?
+  createdAt   DateTime     @default(now())
+}
+
+model Voucher {
+  id          Int          @id @default(autoincrement())
+  number      String       @unique
+  type        String
+  date        DateTime
+  description String?
+  amount      Float        @default(0)
+  journalId   Int          @unique
+  journal     JournalEntry @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+}
+
+model LedgerLine {
+  id        Int          @id @default(autoincrement())
+  entryId   Int
+  entry     JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  accountId Int
+  account   Account      @relation(fields: [accountId], references: [id])
+  debit     Float        @default(0)
+  credit    Float        @default(0)
+  narrative String?
+}
+
+model Customer {
+  id               Int               @id @default(autoincrement())
+  code             String            @unique
+  name             String
+  address          String?
+  city             String?
+  area             String?
+  salesmanId       Int?
+  salesman         Salesman?         @relation(fields: [salesmanId], references: [id])
+  routeId          Int?
+  route            Route?            @relation(fields: [routeId], references: [id])
+  creditDays       Int               @default(0)
+  creditLimit      Float             @default(0)
+  ntn              String?
+  strn             String?
+  openingBalance   Float             @default(0)
+  accountId        Int?
+  account          Account?          @relation(fields: [accountId], references: [id])
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  quotations       Quotation[]
+  salesInvoices   SalesInvoice[]
+  recoveryVouchers RecoveryVoucher[]
+  salesReturns    SalesReturn[]
+  claims          Claim[]
+}
+
+model Quotation {
+  id         Int             @id @default(autoincrement())
+  number     String          @unique
+  date       DateTime
+  validUntil DateTime
+  customerId Int
+  customer   Customer        @relation(fields: [customerId], references: [id])
+  salesmanId Int?
+  salesman   Salesman?       @relation(fields: [salesmanId], references: [id])
+  subtotal   Float           @default(0)
+  taxTotal   Float           @default(0)
+  total      Float           @default(0)
+  status     String          @default("Open")
+  remarks    String?
+  items      QuotationItem[]
+  salesInvoice SalesInvoice?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+}
+
+model QuotationItem {
+  id          Int       @id @default(autoincrement())
+  quotationId Int
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  productId   Int
+  product     Product   @relation(fields: [productId], references: [id])
+  unitId      Int
+  unit        Unit      @relation(fields: [unitId], references: [id])
+  quantity    Float
+  price       Float
+  discount    Float     @default(0)
+  vatPercent  Float     @default(0)
+  lineTotal   Float
+}
+
+model SalesInvoice {
+  id            Int             @id @default(autoincrement())
+  number        String          @unique
+  date          DateTime
+  customerId    Int
+  customer      Customer        @relation(fields: [customerId], references: [id])
+  warehouseId   Int
+  warehouse     Warehouse       @relation(fields: [warehouseId], references: [id])
+  salesmanId    Int?
+  salesman      Salesman?       @relation(fields: [salesmanId], references: [id])
+  deliveryManId Int?
+  deliveryMan   DeliveryMan?    @relation(fields: [deliveryManId], references: [id])
+  quotationId   Int?            @unique
+  quotation     Quotation?      @relation(fields: [quotationId], references: [id])
+  loadSlipId    Int?
+  loadSlip      LoadSlip?       @relation(fields: [loadSlipId], references: [id])
+  isCredit      Boolean         @default(true)
+  dueDate       DateTime?
+  freight       Float           @default(0)
+  taxTotal      Float           @default(0)
+  subtotal      Float           @default(0)
+  total         Float           @default(0)
+  paidAmount    Float           @default(0)
+  cogsTotal     Float           @default(0)
+  status        String          @default("Posted")
+  remarks       String?
+  items         SalesItem[]
+  recoveryItems RecoveryItem[]
+  salesReturns  SalesReturn[]
+  claims        Claim[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model SalesItem {
+  id            Int          @id @default(autoincrement())
+  salesInvoiceId Int
+  salesInvoice  SalesInvoice @relation(fields: [salesInvoiceId], references: [id], onDelete: Cascade)
+  productId     Int
+  product       Product      @relation(fields: [productId], references: [id])
+  unitId        Int
+  unit          Unit         @relation(fields: [unitId], references: [id])
+  batchNo       String?
+  quantity      Float
+  freeQuantity  Float        @default(0)
+  price         Float
+  discount      Float        @default(0)
+  vatPercent    Float        @default(0)
+  lineTotal     Float
+  costAmount    Float        @default(0)
+}
+
+model SalesReturn {
+  id              Int               @id @default(autoincrement())
+  number          String            @unique
+  date            DateTime
+  customerId      Int
+  customer        Customer          @relation(fields: [customerId], references: [id])
+  warehouseId     Int
+  warehouse       Warehouse         @relation(fields: [warehouseId], references: [id])
+  salesInvoiceId  Int?
+  salesInvoice    SalesInvoice?     @relation(fields: [salesInvoiceId], references: [id])
+  claimId         Int?              @unique
+  claim           Claim?            @relation(fields: [claimId], references: [id])
+  subtotal        Float             @default(0)
+  taxTotal        Float             @default(0)
+  total           Float             @default(0)
+  cogsTotal       Float             @default(0)
+  remarks         String?
+  items           SalesReturnItem[]
+  createdAt       DateTime          @default(now())
+}
+
+model SalesReturnItem {
+  id            Int         @id @default(autoincrement())
+  salesReturnId Int
+  salesReturn   SalesReturn @relation(fields: [salesReturnId], references: [id], onDelete: Cascade)
+  productId     Int
+  product       Product     @relation(fields: [productId], references: [id])
+  unitId        Int
+  quantity      Float
+  batchNo       String?
+  price         Float
+  discount      Float         @default(0)
+  vatPercent    Float         @default(0)
+  lineTotal     Float
+  costAmount    Float         @default(0)
+}
+
+model Claim {
+  id                Int              @id @default(autoincrement())
+  number            String           @unique
+  date              DateTime
+  partyType         String           @default("Customer")
+  customerId        Int?
+  customer          Customer?        @relation(fields: [customerId], references: [id])
+  vendorId          Int?
+  vendor            Vendor?          @relation(fields: [vendorId], references: [id])
+  warehouseId       Int
+  warehouse         Warehouse        @relation(fields: [warehouseId], references: [id])
+  salesmanId        Int?
+  salesman          Salesman?        @relation(fields: [salesmanId], references: [id])
+  salesInvoiceId    Int?
+  salesInvoice      SalesInvoice?    @relation(fields: [salesInvoiceId], references: [id])
+  purchaseInvoiceId Int?
+  purchaseInvoice   PurchaseInvoice? @relation(fields: [purchaseInvoiceId], references: [id])
+  deliveryDate      DateTime?
+  claimType         String           @default("Damage")
+  status            String           @default("Open")
+  resolution        String?
+  subtotal          Float            @default(0)
+  taxTotal          Float            @default(0)
+  total             Float            @default(0)
+  remarks           String?
+  items             ClaimItem[]
+  salesReturn       SalesReturn?
+  purchaseReturnId  Int?             @unique
+  purchaseReturn    PurchaseReturn?  @relation(fields: [purchaseReturnId], references: [id])
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+}
+
+model ClaimItem {
+  id         Int     @id @default(autoincrement())
+  claimId    Int
+  claim      Claim   @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  productId  Int
+  product    Product @relation(fields: [productId], references: [id])
+  unitId     Int
+  quantity   Float
+  batchNo    String?
+  price      Float
+  discount   Float   @default(0)
+  vatPercent Float   @default(0)
+  lineTotal  Float
+  reason     String?
+}
+
+model RecoveryVoucher {
+  id            Int            @id @default(autoincrement())
+  number        String         @unique
+  date          DateTime
+  customerId    Int
+  customer      Customer       @relation(fields: [customerId], references: [id])
+  salesmanId    Int?
+  salesman      Salesman?      @relation(fields: [salesmanId], references: [id])
+  deliveryManId Int?
+  deliveryMan   DeliveryMan?   @relation(fields: [deliveryManId], references: [id])
+  paymentMode   String         @default("Cash")
+  amount        Float
+  remarks       String?
+  items         RecoveryItem[]
+  createdAt     DateTime       @default(now())
+}
+
+model RecoveryItem {
+  id                Int             @id @default(autoincrement())
+  recoveryVoucherId Int
+  recoveryVoucher   RecoveryVoucher @relation(fields: [recoveryVoucherId], references: [id], onDelete: Cascade)
+  salesInvoiceId    Int
+  salesInvoice      SalesInvoice    @relation(fields: [salesInvoiceId], references: [id])
+  amount            Float
+}
+
+model LoadSlip {
+  id            Int            @id @default(autoincrement())
+  number        String         @unique
+  date          DateTime
+  deliveryManId Int
+  deliveryMan   DeliveryMan    @relation(fields: [deliveryManId], references: [id])
+  status        String         @default("Pending")
+  remarks       String?
+  invoices      SalesInvoice[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Vendor {
+  id              Int               @id @default(autoincrement())
+  code            String            @unique
+  name            String
+  address         String?
+  city            String?
+  paymentTerms    Int               @default(30)
+  creditLimit     Float             @default(0)
+  strn            String?
+  openingBalance  Float             @default(0)
+  accountId       Int?
+  account         Account?          @relation(fields: [accountId], references: [id])
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  purchaseInvoices PurchaseInvoice[]
+  purchaseReturns  PurchaseReturn[]
+  claims           Claim[]
+}
+
+model StockAdjustment {
+  id              Int       @id @default(autoincrement())
+  number          String    @unique
+  date            DateTime
+  warehouseId     Int
+  warehouse       Warehouse @relation(fields: [warehouseId], references: [id])
+  productId       Int
+  product         Product   @relation(fields: [productId], references: [id])
+  batchNo         String?
+  type            String
+  quantityBefore  Float
+  quantityAfter   Float
+  quantityChange  Float
+  costPerUnit     Float     @default(0)
+  valueChange     Float     @default(0)
+  reason          String?
+  createdAt       DateTime  @default(now())
+}
+
+model StockTransfer {
+  id              Int                 @id @default(autoincrement())
+  number          String              @unique
+  date            DateTime
+  fromWarehouseId Int
+  fromWarehouse   Warehouse           @relation("TransferFrom", fields: [fromWarehouseId], references: [id])
+  toWarehouseId   Int
+  toWarehouse     Warehouse           @relation("TransferTo", fields: [toWarehouseId], references: [id])
+  remarks         String?
+  items           StockTransferItem[]
+  createdAt       DateTime            @default(now())
+}
+
+model StockTransferItem {
+  id              Int           @id @default(autoincrement())
+  stockTransferId Int
+  stockTransfer   StockTransfer @relation(fields: [stockTransferId], references: [id], onDelete: Cascade)
+  productId       Int
+  product         Product       @relation(fields: [productId], references: [id])
+  batchNo         String?
+  quantity        Float
+}

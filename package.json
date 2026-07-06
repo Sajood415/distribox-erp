@@ -1,14 +1,19 @@
 {
   "name": "distribox-erp",
   "version": "1.0.0",
-  "main": "src/main/main.js",
+  "description": "Autobiz-style Distribution ERP desktop application",
+  "main": "./out/main/index.js",
   "scripts": {
-    "start": "electron ."
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "postinstall": "prisma generate --schema prisma/master.prisma && prisma generate --schema prisma/company.prisma",
+    "db:push": "prisma db push --schema prisma/master.prisma && prisma db push --schema prisma/company.prisma",
+    "db:studio": "prisma studio"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "devDependencies": {
     "@vitejs/plugin-react": "^4.7.0",
     "concurrently": "^9.2.1",
