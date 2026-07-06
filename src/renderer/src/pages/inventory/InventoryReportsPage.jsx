@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import DataTable from "../../components/DataTable";
 
 const lowStockColumns = [
@@ -59,6 +60,32 @@ export default function InventoryReportsPage() {
           <p>Low stock and expiry alerts</p>
         </div>
       </div>
+
+      <section className="document-card">
+        <h3>Stock Ledger Reports</h3>
+        <div className="module-grid">
+          <Link to="/inventory/product-ledger" className="module-card">
+            <strong>Product Ledger</strong>
+            <span>Movement history by product</span>
+          </Link>
+          <Link to="/inventory/warehouse-ledger" className="module-card">
+            <strong>Warehouse Ledger</strong>
+            <span>Movements by warehouse</span>
+          </Link>
+          <Link to="/inventory/batch-ledger" className="module-card">
+            <strong>Batch Ledger</strong>
+            <span>Batch-level balances</span>
+          </Link>
+          <Link to="/inventory/stock-card" className="module-card">
+            <strong>Stock Card</strong>
+            <span>Product card per warehouse</span>
+          </Link>
+          <Link to="/inventory/movement-history" className="module-card">
+            <strong>Movement History</strong>
+            <span>Search all inventory movements</span>
+          </Link>
+        </div>
+      </section>
 
       <section className="document-card">
         <h3>Low Stock ({lowStock.length})</h3>

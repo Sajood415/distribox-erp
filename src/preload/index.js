@@ -147,6 +147,15 @@ contextBridge.exposeInMainWorld("api", {
     supplierStatement: (filters) => invoke("reports:supplierstatement", filters || {}),
     outstandingStatement: (filters) => invoke("reports:outstandingstatement", filters || {}),
   },
+  stockLedger: {
+    lookups: () => invoke("stockledger:lookups"),
+    product: (filters) => invoke("stockledger:product", filters || {}),
+    warehouse: (filters) => invoke("stockledger:warehouse", filters || {}),
+    batch: (filters) => invoke("stockledger:batch", filters || {}),
+    card: (filters) => invoke("stockledger:card", filters || {}),
+    history: (filters) => invoke("stockledger:history", filters || {}),
+    movements: (filters) => invoke("stockledger:movements", filters || {}),
+  },
   tools: {
     backup: () => invoke("tools:backup"),
     backupLocal: () => invoke("tools:backup:local"),

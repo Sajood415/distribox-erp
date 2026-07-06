@@ -22,6 +22,11 @@ import StockTakePage from "./pages/inventory/StockTakePage";
 import StockAdjustmentsPage from "./pages/inventory/StockAdjustmentsPage";
 import StockTransfersPage from "./pages/inventory/StockTransfersPage";
 import InventoryReportsPage from "./pages/inventory/InventoryReportsPage";
+import ProductLedgerPage from "./pages/inventory/ProductLedgerPage";
+import WarehouseLedgerPage from "./pages/inventory/WarehouseLedgerPage";
+import BatchLedgerPage from "./pages/inventory/BatchLedgerPage";
+import StockCardPage from "./pages/inventory/StockCardPage";
+import MovementHistoryPage from "./pages/inventory/MovementHistoryPage";
 import QuotationsPage from "./pages/sales/QuotationsPage";
 import SalesInvoicesPage from "./pages/sales/SalesInvoicesPage";
 import SalesInvoiceFormPage from "./pages/sales/SalesInvoiceFormPage";
@@ -113,6 +118,12 @@ function AppRoutes() {
         <Route path="inventory/adjustments" element={<StockAdjustmentsPage />} />
         <Route path="inventory/transfers" element={<StockTransfersPage />} />
         <Route path="inventory/reports" element={<InventoryReportsPage />} />
+        <Route path="inventory/product-ledger" element={<ProductLedgerPage />} />
+        <Route path="inventory/warehouse-ledger" element={<WarehouseLedgerPage />} />
+        <Route path="inventory/batch-ledger" element={<BatchLedgerPage />} />
+        <Route path="inventory/stock-card" element={<StockCardPage />} />
+        <Route path="inventory/movement-history" element={<MovementHistoryPage />} />
+        <Route path="inventory/history" element={<MovementHistoryPage />} />
         <Route path="sales/quotations" element={<QuotationsPage />} />
         <Route path="sales/invoices" element={<SalesInvoicesPage />} />
         <Route path="sales/invoices/new" element={<SalesInvoiceFormPage />} />

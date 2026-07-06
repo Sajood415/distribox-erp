@@ -4,6 +4,9 @@ import { issueStockFIFO } from "./stock";
 import { postSalesJournal } from "./accounting";
 import { getSettingValue } from "./settings-service";
 import { SETTING_KEYS, CREDIT_LIMIT_POLICIES } from "../core/settings-keys";
+import { recordStockMovement } from "../domain/stock-movement-recorder";
+import { STOCK_MOVEMENT_TYPES } from "../core/stock-movement-types";
+import { SOURCE_DOCUMENT_TYPES } from "../core/account-roles";
 import {
   getCustomerOutstanding,
   getInvoiceOutstanding,
@@ -115,6 +118,7 @@ export async function saveSalesInvoice(payload) {
     const result = await prisma.$transaction(async (tx) => {
       let cogsTotal = 0;
       const itemRecords = [];
+      const stockIssues = [];
 
       for (const item of items) {
         const stockQty = item.quantity + item.freeQuantity;
@@ -124,6 +128,7 @@ export async function saveSalesInvoice(payload) {
           quantity: stockQty,
         });
         cogsTotal += totalCost;
+        stockIssues.push({ productId: item.productId, allocations });
         itemRecords.push({
           ...item,
           batchNo: allocations[0]?.batchNo || null,
@@ -182,6 +187,25 @@ export async function saveSalesInvoice(payload) {
       }
 
       await postSalesJournal(tx, invoice);
+
+      for (const issue of stockIssues) {
+        for (const allocation of issue.allocations) {
+          await recordStockMovement(tx, {
+            date: invoice.date,
+            productId: issue.productId,
+            warehouseId: invoice.warehouseId,
+            batchNo: allocation.batchNo,
+            movementType: STOCK_MOVEMENT_TYPES.SALES,
+            documentType: SOURCE_DOCUMENT_TYPES.SALES_INVOICE,
+            documentId: invoice.id,
+            referenceNumber: invoice.number,
+            quantityIn: 0,
+            quantityOut: allocation.quantity,
+            unitCost: allocation.costPerUnit,
+          });
+        }
+      }
+
       return invoice;
     });
 

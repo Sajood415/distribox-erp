@@ -3,6 +3,9 @@ import { calcLineNet, calcLineVat, roundMoney } from "../utils/money";
 import { increaseStock } from "./stock";
 import { postPurchaseJournal } from "./accounting";
 import { getPurchaseInvoiceOutstanding } from "../domain/vendor-outstanding";
+import { recordStockMovement } from "../domain/stock-movement-recorder";
+import { STOCK_MOVEMENT_TYPES } from "../core/stock-movement-types";
+import { SOURCE_DOCUMENT_TYPES } from "../core/account-roles";
 
 function success(data) {
   return { success: true, data };
@@ -167,6 +170,20 @@ export async function savePurchaseInvoice(payload) {
           expiryDate: item.expiryDate,
           quantity: stockQty,
           costPerUnit: item.price,
+        });
+
+        await recordStockMovement(tx, {
+          date: invoice.date,
+          productId: item.productId,
+          warehouseId: invoice.warehouseId,
+          batchNo: item.batchNo,
+          movementType: STOCK_MOVEMENT_TYPES.PURCHASE,
+          documentType: SOURCE_DOCUMENT_TYPES.PURCHASE_INVOICE,
+          documentId: invoice.id,
+          referenceNumber: invoice.number,
+          quantityIn: stockQty,
+          quantityOut: 0,
+          unitCost: item.price,
         });
 
         await tx.product.update({

@@ -138,6 +138,15 @@ import {
   getSubLedgerLookups,
 } from "../services/sub-ledger-service";
 import {
+  getProductLedger,
+  getWarehouseLedger,
+  getBatchLedger,
+  getStockCard,
+  getInventoryHistory,
+  getMovementHistory,
+  getStockLedgerLookups,
+} from "../services/stock-ledger-service";
+import {
   getSettings,
   saveSettings,
   listDocumentSequences,
@@ -260,6 +269,14 @@ export function registerIpcHandlers() {
   registerHandler(ipcMain, "reports:supplierstatement", getSupplierStatement);
   registerHandler(ipcMain, "reports:outstandingstatement", getOutstandingStatement);
   registerHandler(ipcMain, "reports:subledgerlookups", getSubLedgerLookups);
+
+  registerHandler(ipcMain, "stockledger:lookups", getStockLedgerLookups);
+  registerHandler(ipcMain, "stockledger:product", getProductLedger);
+  registerHandler(ipcMain, "stockledger:warehouse", getWarehouseLedger);
+  registerHandler(ipcMain, "stockledger:batch", getBatchLedger);
+  registerHandler(ipcMain, "stockledger:card", getStockCard);
+  registerHandler(ipcMain, "stockledger:history", getInventoryHistory);
+  registerHandler(ipcMain, "stockledger:movements", getMovementHistory);
 
   registerHandler(
     ipcMain,

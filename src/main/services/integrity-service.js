@@ -14,6 +14,7 @@ import {
 } from "../domain/vendor-outstanding";
 import { getCustomerOutstanding } from "../domain/customer-outstanding";
 import { resolveAccountIdByRole } from "./account-mapping-service";
+import { getStockValuation } from "../domain/stock-quantity";
 
 function success(data) {
   return { success: true, data };
@@ -144,6 +145,57 @@ export async function runIntegrityChecks() {
     });
   }
 
+  let stockLedgerMismatch = false;
+  let inventoryGlMismatch = false;
+  try {
+    const stockRows = await prisma.stock.findMany();
+    for (const row of stockRows) {
+      const lastMovement = await prisma.stockMovement.findFirst({
+        where: {
+          productId: row.productId,
+          warehouseId: row.warehouseId,
+          batchNo: row.batchNo,
+        },
+        orderBy: [{ date: "desc" }, { id: "desc" }],
+      });
+
+      if (!lastMovement || Math.abs(lastMovement.runningQuantity - row.quantity) > 0.01) {
+        stockLedgerMismatch = true;
+        if (issues.length < 20) {
+          issues.push({
+            type: "STOCK_LEDGER_MISMATCH",
+            message: `Stock ledger does not match on-hand for product #${row.productId} / warehouse #${row.warehouseId}`,
+            recordId: row.id,
+          });
+        }
+      }
+    }
+
+    const inventoryAccountId = await resolveAccountIdByRole(prisma, ACCOUNT_ROLES.INVENTORY);
+    const inventoryLines = await findJournalLinesCumulative(prisma, {
+      end: new Date("2099-12-31"),
+      accountId: inventoryAccountId,
+    });
+    const inventoryGl = roundMoney(
+      inventoryLines.reduce((sum, line) => sum + line.debit - line.credit, 0)
+    );
+    const stockValuation = await getStockValuation(prisma);
+    if (Math.abs(inventoryGl - stockValuation.value) > 0.01) {
+      inventoryGlMismatch = true;
+      issues.push({
+        type: "INVENTORY_GL_MISMATCH",
+        message: `Inventory GL (${inventoryGl}) does not match stock valuation (${stockValuation.value})`,
+        recordId: 0,
+      });
+    }
+  } catch (error) {
+    issues.push({
+      type: "STOCK_LEDGER_CHECK_FAILED",
+      message: error.message || "Failed to compare stock ledger balances",
+      recordId: 0,
+    });
+  }
+
   return success({
     summary: {
       journalCount: entries.length,
@@ -154,6 +206,8 @@ export async function runIntegrityChecks() {
       negativeStockCount: negativeStock.length,
       arMismatch,
       apMismatch,
+      stockLedgerMismatch,
+      inventoryGlMismatch,
       issueCount: issues.length,
     },
     issues,
@@ -162,7 +216,9 @@ export async function runIntegrityChecks() {
       orphans.length === 0 &&
       missingRoles.length === 0 &&
       !arMismatch &&
-      !apMismatch,
+      !apMismatch &&
+      !stockLedgerMismatch &&
+      !inventoryGlMismatch,
   });
 }
 

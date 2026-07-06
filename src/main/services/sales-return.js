@@ -3,6 +3,9 @@ import { roundMoney } from "../utils/money";
 import { increaseStock } from "./stock";
 import { postSalesReturnJournal } from "./accounting";
 import { normalizeSaleItems } from "./quotation";
+import { recordStockMovement } from "../domain/stock-movement-recorder";
+import { STOCK_MOVEMENT_TYPES } from "../core/stock-movement-types";
+import { SOURCE_DOCUMENT_TYPES } from "../core/account-roles";
 
 function success(data) {
   return { success: true, data };
@@ -150,6 +153,20 @@ export async function saveSalesReturn(payload) {
           batchNo: item.batchNo,
           quantity: item.quantity,
           costPerUnit: unitCost,
+        });
+
+        await recordStockMovement(tx, {
+          date: salesReturn.date,
+          productId: item.productId,
+          warehouseId: salesReturn.warehouseId,
+          batchNo: item.batchNo,
+          movementType: STOCK_MOVEMENT_TYPES.SALES_RETURN,
+          documentType: SOURCE_DOCUMENT_TYPES.SALES_RETURN,
+          documentId: salesReturn.id,
+          referenceNumber: salesReturn.number,
+          quantityIn: item.quantity,
+          quantityOut: 0,
+          unitCost,
         });
       }
 

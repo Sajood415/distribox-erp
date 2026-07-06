@@ -92,16 +92,23 @@ export async function decreaseStock(tx, { productId, warehouseId, batchNo, quant
     throw new Error("Insufficient stock for return");
   }
 
+  const costPerUnit = existing.costPerUnit;
   const newQty = existing.quantity - quantity;
   if (newQty === 0) {
     await tx.stock.delete({ where: { id: existing.id } });
-    return null;
+    return { costPerUnit };
   }
 
-  return tx.stock.update({
+  await tx.stock.update({
     where: { id: existing.id },
     data: { quantity: newQty },
   });
+  return { costPerUnit };
+}
+
+export async function getStockUnitCost(tx, { productId, warehouseId, batchNo }) {
+  const existing = await findStockRecord(tx, { productId, warehouseId, batchNo });
+  return existing?.costPerUnit || 0;
 }
 
 export async function listStock() {

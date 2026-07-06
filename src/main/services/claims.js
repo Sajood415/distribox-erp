@@ -4,6 +4,9 @@ import { increaseStock, decreaseStock } from "./stock";
 import { postClaimWriteOffJournal } from "./accounting";
 import { savePurchaseReturn } from "./purchase-return";
 import { saveSalesReturn } from "./sales-return";
+import { recordStockMovement } from "../domain/stock-movement-recorder";
+import { STOCK_MOVEMENT_TYPES } from "../core/stock-movement-types";
+import { SOURCE_DOCUMENT_TYPES } from "../core/account-roles";
 
 function success(data) {
   return { success: true, data };
@@ -277,6 +280,21 @@ export async function settleClaim(payload) {
               quantity: item.quantity,
               costPerUnit: unitCost || product?.costPrice || 0,
             });
+
+            await recordStockMovement(tx, {
+              date: claim.date,
+              productId: item.productId,
+              warehouseId: claim.warehouseId,
+              batchNo: item.batchNo,
+              movementType: STOCK_MOVEMENT_TYPES.POSITIVE_ADJUSTMENT,
+              documentType: SOURCE_DOCUMENT_TYPES.CLAIM,
+              documentId: claim.id,
+              referenceNumber: claim.number,
+              quantityIn: item.quantity,
+              quantityOut: 0,
+              unitCost: unitCost || product?.costPrice || 0,
+              remarks: `Claim replace ${claim.number}`,
+            });
           }
         });
 
@@ -292,11 +310,26 @@ export async function settleClaim(payload) {
         const cogsTotal = await resolveClaimCogs(prisma, claim.items, claim.warehouseId);
         await prisma.$transaction(async (tx) => {
           for (const item of claim.items) {
-            await decreaseStock(tx, {
+            const { costPerUnit } = await decreaseStock(tx, {
               productId: item.productId,
               warehouseId: claim.warehouseId,
               batchNo: item.batchNo,
               quantity: item.quantity,
+            });
+
+            await recordStockMovement(tx, {
+              date: claim.date,
+              productId: item.productId,
+              warehouseId: claim.warehouseId,
+              batchNo: item.batchNo,
+              movementType: STOCK_MOVEMENT_TYPES.CLAIM_WRITEOFF,
+              documentType: SOURCE_DOCUMENT_TYPES.CLAIM,
+              documentId: claim.id,
+              referenceNumber: claim.number,
+              quantityIn: 0,
+              quantityOut: item.quantity,
+              unitCost: costPerUnit,
+              remarks: `Claim write-off ${claim.number}`,
             });
           }
 

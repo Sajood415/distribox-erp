@@ -2,6 +2,9 @@ import { getCompanyPrisma } from "../db/init";
 import { calcLineNet, calcLineVat, roundMoney } from "../utils/money";
 import { decreaseStock } from "./stock";
 import { postPurchaseReturnJournal } from "./accounting";
+import { recordStockMovement } from "../domain/stock-movement-recorder";
+import { STOCK_MOVEMENT_TYPES } from "../core/stock-movement-types";
+import { SOURCE_DOCUMENT_TYPES } from "../core/account-roles";
 
 function success(data) {
   return { success: true, data };
@@ -103,11 +106,25 @@ export async function savePurchaseReturn(payload) {
       });
 
       for (const item of items) {
-        await decreaseStock(tx, {
+        const { costPerUnit } = await decreaseStock(tx, {
           productId: item.productId,
           warehouseId: purchaseReturn.warehouseId,
           batchNo: null,
           quantity: item.quantity,
+        });
+
+        await recordStockMovement(tx, {
+          date: purchaseReturn.date,
+          productId: item.productId,
+          warehouseId: purchaseReturn.warehouseId,
+          batchNo: null,
+          movementType: STOCK_MOVEMENT_TYPES.PURCHASE_RETURN,
+          documentType: SOURCE_DOCUMENT_TYPES.PURCHASE_RETURN,
+          documentId: purchaseReturn.id,
+          referenceNumber: purchaseReturn.number,
+          quantityIn: 0,
+          quantityOut: item.quantity,
+          unitCost: costPerUnit,
         });
       }
 

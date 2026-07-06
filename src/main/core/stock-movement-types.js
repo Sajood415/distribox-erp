@@ -1,0 +1,24 @@
+export const STOCK_MOVEMENT_TYPES = {
+  OPENING_STOCK: "OPENING_STOCK",
+  PURCHASE: "PURCHASE",
+  PURCHASE_RETURN: "PURCHASE_RETURN",
+  SALES: "SALES",
+  SALES_RETURN: "SALES_RETURN",
+  POSITIVE_ADJUSTMENT: "POSITIVE_ADJUSTMENT",
+  NEGATIVE_ADJUSTMENT: "NEGATIVE_ADJUSTMENT",
+  CLAIM_WRITEOFF: "CLAIM_WRITEOFF",
+  STOCK_TRANSFER: "STOCK_TRANSFER",
+  PRODUCTION: "PRODUCTION",
+  EXPIRY: "EXPIRY",
+};
+
+export const STOCK_DOCUMENT_ROUTES = {
+  PURCHASE_INVOICE: "/purchase/invoices",
+  PURCHASE_RETURN: "/purchase/returns",
+  SALES_INVOICE: "/sales/invoices",
+  SALES_RETURN: "/claims/sales-returns",
+  STOCK_ADJUSTMENT: "/inventory/adjustments",
+  OPENING_STOCK: "/inventory/opening-stock",
+  CLAIM: "/claims",
+  STOCK_TRANSFER: "/inventory/transfers",
+};

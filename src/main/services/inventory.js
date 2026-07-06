@@ -2,6 +2,8 @@ import { getCompanyPrisma } from "../db/init";
 import { roundMoney } from "../utils/money";
 import { increaseStock, issueStockFIFO } from "./stock";
 import { calcAdjustmentValue, postStockAdjustmentJournal } from "./inventory-accounting";
+import { recordStockMovement } from "../domain/stock-movement-recorder";
+import { STOCK_MOVEMENT_TYPES } from "../core/stock-movement-types";
 
 function success(data) {
   return { success: true, data };
@@ -75,6 +77,31 @@ async function setProductWarehouseQty(tx, { productId, warehouseId, targetQty, b
     quantityChange: delta,
     costPerUnit,
   };
+}
+
+async function recordAdjustmentMovement(tx, adjustment) {
+  const isOpening = adjustment.type === "Opening";
+  const isPositive = adjustment.quantityChange > 0;
+  const movementType = isOpening
+    ? STOCK_MOVEMENT_TYPES.OPENING_STOCK
+    : isPositive
+      ? STOCK_MOVEMENT_TYPES.POSITIVE_ADJUSTMENT
+      : STOCK_MOVEMENT_TYPES.NEGATIVE_ADJUSTMENT;
+
+  await recordStockMovement(tx, {
+    date: adjustment.date,
+    productId: adjustment.productId,
+    warehouseId: adjustment.warehouseId,
+    batchNo: adjustment.batchNo,
+    movementType,
+    documentType: isOpening ? "OPENING_STOCK" : "STOCK_ADJUSTMENT",
+    documentId: adjustment.id,
+    referenceNumber: adjustment.number,
+    quantityIn: isPositive ? Math.abs(adjustment.quantityChange) : 0,
+    quantityOut: isPositive ? 0 : Math.abs(adjustment.quantityChange),
+    unitCost: adjustment.costPerUnit,
+    remarks: adjustment.reason,
+  });
 }
 
 export async function getInventoryLookups() {
@@ -168,6 +195,7 @@ export async function finalizeStockTake(payload) {
         });
 
         await postStockAdjustmentJournal(tx, adjustment);
+        await recordAdjustmentMovement(tx, adjustment);
         created.push(adjustment);
       }
 
@@ -239,6 +267,7 @@ export async function saveOpeningStock(payload) {
         });
 
         await postStockAdjustmentJournal(tx, adjustment);
+        await recordAdjustmentMovement(tx, adjustment);
         created.push(adjustment);
       }
 
@@ -300,6 +329,7 @@ export async function saveStockAdjustment(payload) {
       });
 
       await postStockAdjustmentJournal(tx, adjustment);
+      await recordAdjustmentMovement(tx, adjustment);
       return adjustment;
     });
 
@@ -359,6 +389,36 @@ export async function saveStockTransfer(payload) {
             batchNo: allocation.batchNo,
             quantity: allocation.quantity,
             costPerUnit: allocation.costPerUnit,
+          });
+
+          await recordStockMovement(tx, {
+            date: transfer.date,
+            productId: item.productId,
+            warehouseId: transfer.fromWarehouseId,
+            batchNo: allocation.batchNo,
+            movementType: STOCK_MOVEMENT_TYPES.STOCK_TRANSFER,
+            documentType: "STOCK_TRANSFER",
+            documentId: transfer.id,
+            referenceNumber: transfer.number,
+            quantityIn: 0,
+            quantityOut: allocation.quantity,
+            unitCost: allocation.costPerUnit,
+            remarks: `Transfer out to ${transfer.toWarehouseId}`,
+          });
+
+          await recordStockMovement(tx, {
+            date: transfer.date,
+            productId: item.productId,
+            warehouseId: transfer.toWarehouseId,
+            batchNo: allocation.batchNo,
+            movementType: STOCK_MOVEMENT_TYPES.STOCK_TRANSFER,
+            documentType: "STOCK_TRANSFER",
+            documentId: transfer.id,
+            referenceNumber: transfer.number,
+            quantityIn: allocation.quantity,
+            quantityOut: 0,
+            unitCost: allocation.costPerUnit,
+            remarks: `Transfer in from ${transfer.fromWarehouseId}`,
           });
         }
       }

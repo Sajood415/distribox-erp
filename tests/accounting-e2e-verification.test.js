@@ -61,6 +61,8 @@ describe("Accounting E2E Verification", () => {
 
   let customerId;
   let vendorId;
+  let productId;
+  let warehouseId;
   let salesInvoiceId;
 
   beforeAll(async () => {
@@ -99,7 +101,7 @@ describe("Accounting E2E Verification", () => {
 
     const unit = await prisma.unit.findFirst({ where: { code: "CTN" } });
     const warehouse = await prisma.warehouse.findFirst();
-    const warehouseId = warehouse?.id
+    warehouseId = warehouse?.id
       ?? (await prisma.warehouse.create({ data: { name: "Main Warehouse" } })).id;
 
     const productRes = await saveProduct({
@@ -111,7 +113,7 @@ describe("Accounting E2E Verification", () => {
       costPrice: 100,
       vatPercent: 0,
     });
-    const productId = productRes.data.id;
+    productId = productRes.data.id;
 
     const customerRes = await saveCustomer({
       code: "CUSTA",
@@ -386,5 +388,49 @@ describe("Accounting E2E Verification", () => {
     for (const row of supLedger.data.rows) {
       expect(row.route, row.reference).toBeTruthy();
     }
+  });
+
+  it("verifies stock ledger matches on-hand and inventory GL", async () => {
+    const { getProductLedger } = await import("../src/main/services/stock-ledger-service.js");
+    const { getStockQuantity, getStockValuation } = await import("../src/main/domain/stock-quantity.js");
+    const { applyStockRunningBalance } = await import("../src/main/domain/stock-ledger-shared.js");
+
+    const actualQty = await getStockQuantity(state.prisma, { productId });
+    const actualVal = await getStockValuation(state.prisma, { productId });
+    const ledger = await getProductLedger({
+      productId,
+      startDate: "2000-01-01",
+      endDate: "2099-12-31",
+    });
+
+    expect(ledger.success, ledger.error).toBe(true);
+    assertMetric("Stock Ledger", "Product ledger closing qty", actualQty, ledger.data.closingQty);
+    assertMetric("Stock Ledger", "Product on-hand quantity", actualQty, ledger.data.actualQty);
+    record("Stock Ledger", "Product ledger reconciled", true, ledger.data.matchesStock, ledger.data.matchesStock);
+    expect(ledger.data.matchesStock).toBe(true);
+
+    const movements = await state.prisma.stockMovement.findMany({
+      where: { productId },
+      orderBy: [{ date: "asc" }, { id: "asc" }],
+    });
+    expect(movements.length).toBeGreaterThan(0);
+
+    const scopedRows = movements.map((m) => ({
+      quantityIn: m.quantityIn,
+      quantityOut: m.quantityOut,
+      unitCost: m.unitCost,
+      referenceNumber: m.referenceNumber,
+    }));
+    const withBalance = applyStockRunningBalance(scopedRows);
+    let running = 0;
+    for (const row of withBalance) {
+      running = roundMoney(running + row.quantityIn - row.quantityOut);
+      expect(row.balanceQty, row.referenceNumber).toBe(running);
+    }
+
+    const stockVal = await getStockValuationReport();
+    const inventoryGl = await accountBalance(ACCOUNT_ROLES.INVENTORY);
+    assertMetric("Stock Ledger", "Inventory valuation", inventoryGl, stockVal.data.totalValue);
+    assertMetric("Stock Ledger", "Product stock value", actualVal.value, ledger.data.actualValue);
   });
 });
