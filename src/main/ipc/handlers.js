@@ -89,7 +89,9 @@ import {
 } from "../services/distributor-reports";
 import {
   getDocumentTimeline,
+  getDocumentLinks,
   assertDocumentEditable,
+  archiveDocument,
 } from "../services/document-lifecycle-service";
 import {
   reverseDocument,
@@ -97,6 +99,8 @@ import {
   reversePurchaseInvoice,
   reverseRecoveryVoucher,
 } from "../services/document-reversal-service";
+import { correctDocument, correctClaimDocument } from "../services/document-correction-service";
+import { postDraftDocument } from "../services/document-post-service";
 import { listSalesmanTargets, saveSalesmanTarget, getSalesmanPerformance } from "../services/salesman-target";
 import { listExpenses, saveExpense } from "../services/expense";
 import {
@@ -345,11 +349,16 @@ export function registerIpcHandlers() {
   registerHandler(ipcMain, "distributor:search", globalSearch);
 
   registerHandler(ipcMain, "documents:timeline", getDocumentTimeline);
+  registerHandler(ipcMain, "documents:links", getDocumentLinks);
   registerHandler(ipcMain, "documents:editable", assertDocumentEditable);
+  registerHandler(ipcMain, "documents:archive", archiveDocument);
   registerHandler(ipcMain, "documents:reverse", reverseDocument);
   registerHandler(ipcMain, "documents:reverse:sales", reverseSalesInvoice);
   registerHandler(ipcMain, "documents:reverse:purchase", reversePurchaseInvoice);
   registerHandler(ipcMain, "documents:reverse:recovery", reverseRecoveryVoucher);
+  registerHandler(ipcMain, "documents:correct", correctDocument);
+  registerHandler(ipcMain, "documents:correct:claim", correctClaimDocument);
+  registerHandler(ipcMain, "documents:post", postDraftDocument);
 
   registerHandler(ipcMain, "salesman:targets:list", listSalesmanTargets);
   registerHandler(ipcMain, "salesman:targets:save", saveSalesmanTarget);

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import DataTable from "../../components/DataTable";
+import DocumentLifecyclePanel from "../../components/DocumentLifecyclePanel";
+import { lifecycleStatusColumn } from "../../utils/document-lifecycle-columns";
 import useDocIdHighlight from "../../hooks/useDocIdHighlight";
 import {
   calcPurchaseLine,
@@ -27,6 +29,7 @@ const listColumns = [
   },
   { accessorKey: "total", header: "Total" },
   { accessorKey: "cogsTotal", header: "COGS" },
+  lifecycleStatusColumn,
 ];
 
 export default function SalesReturnsPage() {
@@ -41,6 +44,7 @@ export default function SalesReturnsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [selected, setSelected] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [customerInvoices, setCustomerInvoices] = useState([]);
   const [form, setForm] = useState({
@@ -307,6 +311,15 @@ export default function SalesReturnsPage() {
           showActions={false}
           searchPlaceholder="Search returns..."
           highlightRowId={highlightRowId}
+          onRowClick={setSelected}
+        />
+      )}
+      {selected && (
+        <DocumentLifecyclePanel
+          documentType="SALES_RETURN"
+          documentId={selected.id}
+          documentNumber={selected.number}
+          onRefresh={loadData}
         />
       )}
     </div>

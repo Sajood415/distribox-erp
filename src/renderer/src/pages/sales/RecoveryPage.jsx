@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import DataTable from "../../components/DataTable";
+import DocumentLifecyclePanel from "../../components/DocumentLifecyclePanel";
+import { lifecycleStatusColumn } from "../../utils/document-lifecycle-columns";
 import useDocIdHighlight from "../../hooks/useDocIdHighlight";
 import { todayInputValue } from "../../utils/purchase";
 
@@ -17,6 +19,7 @@ const listColumns = [
   },
   { accessorKey: "amount", header: "Amount" },
   { accessorKey: "paymentMode", header: "Mode" },
+  lifecycleStatusColumn,
 ];
 
 export default function RecoveryPage() {
@@ -27,6 +30,7 @@ export default function RecoveryPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({
     date: todayInputValue(),
     customerId: "",
@@ -227,6 +231,15 @@ export default function RecoveryPage() {
           showActions={false}
           searchPlaceholder="Search recoveries..."
           highlightRowId={highlightRowId}
+          onRowClick={setSelected}
+        />
+      )}
+      {selected && (
+        <DocumentLifecyclePanel
+          documentType="RECOVERY"
+          documentId={selected.id}
+          documentNumber={selected.number}
+          onRefresh={loadData}
         />
       )}
     </div>

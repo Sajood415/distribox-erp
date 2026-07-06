@@ -7,7 +7,7 @@ import { recordStockMovement } from "../domain/stock-movement-recorder";
 import { STOCK_MOVEMENT_TYPES } from "../core/stock-movement-types";
 import { SOURCE_DOCUMENT_TYPES } from "../core/account-roles";
 import { DOCUMENT_TYPES } from "../core/document-types";
-import { onDocumentCreated, onDocumentPosted } from "./document-lifecycle-service";
+import { onDocumentCreated, onDocumentPosted, onDocumentEdited, assertDocumentEditable } from "./document-lifecycle-service";
 
 function success(data) {
   return { success: true, data };
@@ -130,6 +130,52 @@ export async function savePurchaseInvoice(payload) {
   }
 
   try {
+    if (payload.id) {
+      const editable = await assertDocumentEditable(DOCUMENT_TYPES.PURCHASE_INVOICE, payload.id);
+      if (!editable.success) return editable;
+
+      const result = await prisma.$transaction(async (tx) => {
+        await tx.purchaseItem.deleteMany({ where: { purchaseInvoiceId: Number(payload.id) } });
+        const invoice = await tx.purchaseInvoice.update({
+          where: { id: Number(payload.id) },
+          data: {
+            date: new Date(payload.date),
+            vendorId: Number(payload.vendorId),
+            warehouseId: Number(payload.warehouseId),
+            isCredit: Boolean(payload.isCredit),
+            freight,
+            taxTotal,
+            subtotal,
+            total,
+            paidAmount,
+            remarks: payload.remarks?.trim() || null,
+            items: {
+              create: items.map((item) => ({
+                productId: item.productId,
+                unitId: item.unitId,
+                batchNo: item.batchNo,
+                expiryDate: item.expiryDate ? new Date(item.expiryDate) : null,
+                quantity: item.quantity,
+                freeQuantity: item.freeQuantity,
+                price: item.price,
+                discount: item.discount,
+                vatPercent: item.vatPercent,
+                lineTotal: item.lineTotal,
+              })),
+            },
+          },
+          include: { items: true },
+        });
+        await onDocumentEdited(tx, {
+          documentType: DOCUMENT_TYPES.PURCHASE_INVOICE,
+          documentId: invoice.id,
+          documentNumber: invoice.number,
+        });
+        return invoice;
+      });
+      return success(result);
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       const number = payload.number || (await nextInvoiceNumber(tx));
       const invoice = await tx.purchaseInvoice.create({

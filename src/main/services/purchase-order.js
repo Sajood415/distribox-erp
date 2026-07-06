@@ -4,7 +4,13 @@ import { savePurchaseInvoice } from "./purchase";
 import { logOperation } from "./operation-log";
 import { EVENT_TYPES } from "./event-service";
 import { DOCUMENT_TYPES } from "../core/document-types";
-import { onDocumentCreated, onDocumentPosted, onDocumentCancelled } from "./document-lifecycle-service";
+import {
+  onDocumentCreated,
+  onDocumentPosted,
+  onDocumentCancelled,
+  onDocumentEdited,
+  canEditDocument,
+} from "./document-lifecycle-service";
 
 export const PO_STATUSES = {
   DRAFT: "Draft",
@@ -109,6 +115,9 @@ export async function savePurchaseOrder(payload) {
         if (existing.status !== PO_STATUSES.DRAFT) {
           throw new Error("Only draft purchase orders can be edited");
         }
+        if (!canEditDocument(existing.lifecycleStatus)) {
+          throw new Error("Posted documents cannot be edited");
+        }
         await tx.purchaseOrderItem.deleteMany({ where: { purchaseOrderId: existing.id } });
         const updated = await tx.purchaseOrder.update({
           where: { id: existing.id },
@@ -134,6 +143,11 @@ export async function savePurchaseOrder(payload) {
             },
           },
           include: { vendor: true, warehouse: true, items: { include: { product: true } } },
+        });
+        await onDocumentEdited(tx, {
+          documentType: DOCUMENT_TYPES.PURCHASE_ORDER,
+          documentId: updated.id,
+          documentNumber: updated.number,
         });
         await logOperation(tx, {
           table: "PurchaseOrder",
@@ -268,6 +282,14 @@ async function updatePoStatus(id, fromStatus, toStatus, label) {
         where: { id: order.id },
         data: { status: toStatus },
       });
+      if (toStatus === PO_STATUSES.APPROVED) {
+        await onDocumentPosted(tx, {
+          documentType: DOCUMENT_TYPES.PURCHASE_ORDER,
+          documentId: updated.id,
+          documentNumber: updated.number,
+          postedAt: updated.date,
+        });
+      }
       await logOperation(tx, {
         table: "PurchaseOrder",
         recordId: updated.id,

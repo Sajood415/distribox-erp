@@ -3,7 +3,7 @@ import { roundMoney } from "../utils/money";
 import { postRecoveryJournal } from "./accounting";
 import { getInvoiceOutstanding } from "../domain/customer-outstanding";
 import { DOCUMENT_TYPES } from "../core/document-types";
-import { onDocumentCreated, onDocumentPosted } from "./document-lifecycle-service";
+import { onDocumentCreated, onDocumentPosted, onDocumentEdited, assertDocumentEditable } from "./document-lifecycle-service";
 
 function success(data) {
   return { success: true, data };
@@ -85,6 +85,45 @@ export async function saveRecovery(payload) {
   }
 
   try {
+    if (payload.id) {
+      const editable = await assertDocumentEditable(DOCUMENT_TYPES.RECOVERY, payload.id);
+      if (!editable.success) return editable;
+
+      const result = await prisma.$transaction(async (tx) => {
+        await tx.recoveryItem.deleteMany({ where: { recoveryVoucherId: Number(payload.id) } });
+        const recoveryItems = [];
+        if (items.length > 0) {
+          for (const item of items) {
+            recoveryItems.push({
+              salesInvoiceId: Number(item.salesInvoiceId),
+              amount: roundMoney(item.amount),
+            });
+          }
+        }
+        const recovery = await tx.recoveryVoucher.update({
+          where: { id: Number(payload.id) },
+          data: {
+            date: new Date(payload.date),
+            customerId: Number(payload.customerId),
+            salesmanId: payload.salesmanId ? Number(payload.salesmanId) : null,
+            deliveryManId: payload.deliveryManId ? Number(payload.deliveryManId) : null,
+            paymentMode: payload.paymentMode || "Cash",
+            amount,
+            remarks: payload.remarks?.trim() || null,
+            items: { create: recoveryItems },
+          },
+          include: { items: true },
+        });
+        await onDocumentEdited(tx, {
+          documentType: DOCUMENT_TYPES.RECOVERY,
+          documentId: recovery.id,
+          documentNumber: recovery.number,
+        });
+        return recovery;
+      });
+      return success(result);
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       const recoveryItems = [];
 

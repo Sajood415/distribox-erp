@@ -2,6 +2,8 @@ import { getCompanyPrisma } from "../db/init";
 import { roundMoney } from "../utils/money";
 import { logOperation } from "./operation-log";
 import { EVENT_TYPES } from "./event-service";
+import { DOCUMENT_TYPES } from "../core/document-types";
+import { onDocumentCreated, onDocumentPosted } from "./document-lifecycle-service";
 
 export const LOAD_SLIP_STATUSES = {
   DRAFT: "Draft",
@@ -92,6 +94,12 @@ export async function saveLoadSlip(payload) {
         });
       }
 
+      await onDocumentCreated(tx, {
+        documentType: DOCUMENT_TYPES.LOAD_SLIP,
+        documentId: loadSlip.id,
+        documentNumber: loadSlip.number,
+      });
+
       await logOperation(tx, {
         table: "LoadSlip",
         recordId: loadSlip.id,
@@ -151,6 +159,15 @@ export async function updateLoadSlipStatus(payload) {
         await tx.salesInvoice.updateMany({
           where: { loadSlipId: loadSlip.id },
           data: { status: "Delivered" },
+        });
+      }
+
+      if (status === LOAD_SLIP_STATUSES.LOADED && loadSlip.lifecycleStatus !== "Posted") {
+        await onDocumentPosted(tx, {
+          documentType: DOCUMENT_TYPES.LOAD_SLIP,
+          documentId: loadSlip.id,
+          documentNumber: loadSlip.number,
+          postedAt: loadSlip.date,
         });
       }
 

@@ -14,7 +14,7 @@ import {
   normalizeSaleItems,
 } from "./quotation";
 import { DOCUMENT_TYPES } from "../core/document-types";
-import { onDocumentCreated, onDocumentPosted } from "./document-lifecycle-service";
+import { onDocumentCreated, onDocumentPosted, onDocumentEdited, assertDocumentEditable } from "./document-lifecycle-service";
 
 function success(data) {
   return { success: true, data };
@@ -117,6 +117,54 @@ export async function saveSalesInvoice(payload) {
   }
 
   try {
+    if (payload.id) {
+      const editable = await assertDocumentEditable(DOCUMENT_TYPES.SALES_INVOICE, payload.id);
+      if (!editable.success) return editable;
+
+      const result = await prisma.$transaction(async (tx) => {
+        await tx.salesItem.deleteMany({ where: { salesInvoiceId: Number(payload.id) } });
+        const invoice = await tx.salesInvoice.update({
+          where: { id: Number(payload.id) },
+          data: {
+            date: new Date(payload.date),
+            customerId: Number(payload.customerId),
+            warehouseId: Number(payload.warehouseId),
+            salesmanId: payload.salesmanId ? Number(payload.salesmanId) : null,
+            deliveryManId: payload.deliveryManId ? Number(payload.deliveryManId) : null,
+            isCredit: Boolean(payload.isCredit),
+            freight,
+            taxTotal,
+            subtotal,
+            total,
+            paidAmount,
+            remarks: payload.remarks?.trim() || null,
+            items: {
+              create: items.map((item) => ({
+                productId: item.productId,
+                unitId: item.unitId,
+                batchNo: item.batchNo,
+                quantity: item.quantity,
+                freeQuantity: item.freeQuantity,
+                price: item.price,
+                discount: item.discount,
+                vatPercent: item.vatPercent,
+                lineTotal: item.lineTotal,
+                costAmount: 0,
+              })),
+            },
+          },
+          include: { items: true },
+        });
+        await onDocumentEdited(tx, {
+          documentType: DOCUMENT_TYPES.SALES_INVOICE,
+          documentId: invoice.id,
+          documentNumber: invoice.number,
+        });
+        return invoice;
+      });
+      return success(result);
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       let cogsTotal = 0;
       const itemRecords = [];

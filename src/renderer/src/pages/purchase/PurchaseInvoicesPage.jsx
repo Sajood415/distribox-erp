@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import DataTable from "../../components/DataTable";
+import DocumentLifecyclePanel from "../../components/DocumentLifecyclePanel";
+import { lifecycleStatusColumn } from "../../utils/document-lifecycle-columns";
 import useDocIdHighlight from "../../hooks/useDocIdHighlight";
 
 const columns = [
@@ -36,6 +38,7 @@ const columns = [
     header: "Type",
     cell: ({ row }) => (row.original.isCredit ? "Credit" : "Cash"),
   },
+  lifecycleStatusColumn,
 ];
 
 export default function PurchaseInvoicesPage() {
@@ -43,6 +46,7 @@ export default function PurchaseInvoicesPage() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selected, setSelected] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -79,6 +83,18 @@ export default function PurchaseInvoicesPage() {
           showActions={false}
           searchPlaceholder="Search invoices..."
           highlightRowId={highlightRowId}
+          onRowClick={setSelected}
+        />
+      )}
+      {selected && (
+        <DocumentLifecyclePanel
+          documentType="PURCHASE_INVOICE"
+          documentId={selected.id}
+          documentNumber={selected.number}
+          onRefresh={async () => {
+            const result = await window.api.purchase.listInvoices();
+            if (result.success) setRows(result.data);
+          }}
         />
       )}
     </div>

@@ -5,6 +5,8 @@ import { postPurchaseReturnJournal } from "./accounting";
 import { recordStockMovement } from "../domain/stock-movement-recorder";
 import { STOCK_MOVEMENT_TYPES } from "../core/stock-movement-types";
 import { SOURCE_DOCUMENT_TYPES } from "../core/account-roles";
+import { DOCUMENT_TYPES } from "../core/document-types";
+import { onDocumentCreated, onDocumentPosted } from "./document-lifecycle-service";
 
 function success(data) {
   return { success: true, data };
@@ -128,7 +130,18 @@ export async function savePurchaseReturn(payload) {
         });
       }
 
+      await onDocumentCreated(tx, {
+        documentType: DOCUMENT_TYPES.PURCHASE_RETURN,
+        documentId: purchaseReturn.id,
+        documentNumber: purchaseReturn.number,
+      });
       await postPurchaseReturnJournal(tx, purchaseReturn);
+      await onDocumentPosted(tx, {
+        documentType: DOCUMENT_TYPES.PURCHASE_RETURN,
+        documentId: purchaseReturn.id,
+        documentNumber: purchaseReturn.number,
+        postedAt: purchaseReturn.date,
+      });
       return purchaseReturn;
     });
 

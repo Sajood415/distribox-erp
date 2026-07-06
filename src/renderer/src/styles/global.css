@@ -615,6 +615,24 @@ label {
   background: #fef9c3;
 }
 
+.data-table tr.row-clickable {
+  cursor: pointer;
+}
+
+.lifecycle-panel {
+  margin-top: 1rem;
+}
+
+.lifecycle-timeline,
+.lifecycle-links {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.lifecycle-actions {
+  margin: 0.75rem 0 1rem;
+}
+
 .document-page {
   display: grid;
   gap: 1rem;

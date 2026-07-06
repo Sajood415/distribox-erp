@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import DataTable from "../../components/DataTable";
+import DocumentLifecyclePanel from "../../components/DocumentLifecyclePanel";
+import { lifecycleStatusColumn } from "../../utils/document-lifecycle-columns";
 import { todayInputValue } from "../../utils/purchase";
 
 const columns = [
@@ -22,6 +24,7 @@ const columns = [
   },
   { accessorKey: "quantityChange", header: "Change" },
   { accessorKey: "valueChange", header: "Value" },
+  lifecycleStatusColumn,
 ];
 
 export default function StockAdjustmentsPage() {
@@ -30,6 +33,7 @@ export default function StockAdjustmentsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [selected, setSelected] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     date: todayInputValue(),
@@ -155,7 +159,21 @@ export default function StockAdjustmentsPage() {
       {loading ? (
         <p>Loading...</p>
       ) : (
-        <DataTable columns={columns} data={rows} showActions={false} searchPlaceholder="Search adjustments..." />
+        <DataTable
+          columns={columns}
+          data={rows}
+          showActions={false}
+          searchPlaceholder="Search adjustments..."
+          onRowClick={setSelected}
+        />
+      )}
+      {selected && (
+        <DocumentLifecyclePanel
+          documentType="STOCK_ADJUSTMENT"
+          documentId={selected.id}
+          documentNumber={selected.number}
+          onRefresh={loadData}
+        />
       )}
     </div>
   );

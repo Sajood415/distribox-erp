@@ -157,11 +157,16 @@ contextBridge.exposeInMainWorld("api", {
   },
   documents: {
     timeline: (payload) => invoke("documents:timeline", payload),
+    links: (payload) => invoke("documents:links", payload),
     assertEditable: (payload) => invoke("documents:editable", payload),
+    archive: (payload) => invoke("documents:archive", payload),
     reverse: (payload) => invoke("documents:reverse", payload),
     reverseSales: (payload) => invoke("documents:reverse:sales", payload),
     reversePurchase: (payload) => invoke("documents:reverse:purchase", payload),
     reverseRecovery: (payload) => invoke("documents:reverse:recovery", payload),
+    correct: (payload) => invoke("documents:correct", payload),
+    correctClaim: (payload) => invoke("documents:correct:claim", payload),
+    postDraft: (payload) => invoke("documents:post", payload),
   },
   salesmanOps: {
     listTargets: (filters) => invoke("salesman:targets:list", filters || {}),

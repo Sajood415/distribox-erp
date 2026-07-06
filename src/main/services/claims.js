@@ -9,6 +9,13 @@ import { STOCK_MOVEMENT_TYPES } from "../core/stock-movement-types";
 import { SOURCE_DOCUMENT_TYPES } from "../core/account-roles";
 import { logOperation } from "./operation-log";
 import { EVENT_TYPES } from "./event-service";
+import { DOCUMENT_TYPES } from "../core/document-types";
+import {
+  onDocumentCreated,
+  onDocumentPosted,
+  onDocumentCancelled,
+} from "./document-lifecycle-service";
+import { resolveClaimDocumentType } from "../core/document-types";
 
 function success(data) {
   return { success: true, data };
@@ -18,8 +25,15 @@ function failure(error) {
   return { success: false, error };
 }
 
-async function logClaimSettled(prisma, claim, resolution) {
+async function markClaimSettled(prisma, claimId, resolution) {
   await prisma.$transaction(async (tx) => {
+    const claim = await tx.claim.findUnique({ where: { id: claimId } });
+    await onDocumentPosted(tx, {
+      documentType: resolveClaimDocumentType(claim.partyType),
+      documentId: claim.id,
+      documentNumber: claim.number,
+      postedAt: claim.date,
+    });
     await logOperation(tx, {
       table: "Claim",
       recordId: claim.id,
@@ -29,6 +43,10 @@ async function logClaimSettled(prisma, claim, resolution) {
       referenceNumber: claim.number,
       message: `Claim ${claim.number} settled as ${resolution}`,
     });
+  });
+  return prisma.claim.findUnique({
+    where: { id: claimId },
+    include: { salesReturn: true, purchaseReturn: true, items: { include: { product: true } } },
   });
 }
 
@@ -150,7 +168,7 @@ export async function saveClaim(payload) {
   try {
     const result = await prisma.$transaction(async (tx) => {
       const number = payload.number || (await nextClaimNumber(tx));
-      return tx.claim.create({
+      const created = await tx.claim.create({
         data: {
           number,
           date: new Date(payload.date),
@@ -189,6 +207,12 @@ export async function saveClaim(payload) {
           items: { include: { product: true } },
         },
       });
+      await onDocumentCreated(tx, {
+        documentType: resolveClaimDocumentType(partyType),
+        documentId: created.id,
+        documentNumber: created.number,
+      });
+      return created;
     });
 
     return success(result);
@@ -235,6 +259,14 @@ export async function updateClaimStatus(payload) {
         referenceNumber: row.number,
         message: `Claim ${row.number} ${status.toLowerCase()}`,
       });
+      if (status === "Rejected") {
+        await onDocumentCancelled(tx, {
+          documentType: resolveClaimDocumentType(row.partyType),
+          documentId: row.id,
+          documentNumber: row.number,
+          reason: payload.reason || "Claim rejected",
+        });
+      }
       return row;
     });
     return success(updated);
@@ -288,13 +320,12 @@ export async function settleClaim(payload) {
           return returnResult;
         }
 
-        const updated = await prisma.claim.update({
+        await prisma.claim.update({
           where: { id },
           data: { status: "Settled", resolution },
-          include: { salesReturn: true, items: { include: { product: true } } },
         });
-        await logClaimSettled(prisma, updated, resolution);
-        return success(updated);
+        const refreshed = await markClaimSettled(prisma, id, resolution);
+        return success(refreshed);
       }
 
       if (resolution === "Replace") {
@@ -331,13 +362,12 @@ export async function settleClaim(payload) {
           }
         });
 
-        const updated = await prisma.claim.update({
+        await prisma.claim.update({
           where: { id },
           data: { status: "Settled", resolution },
-          include: { items: { include: { product: true } } },
         });
-        await logClaimSettled(prisma, updated, resolution);
-        return success(updated);
+        const refreshed = await markClaimSettled(prisma, id, resolution);
+        return success(refreshed);
       }
 
       if (resolution === "WriteOff") {
@@ -370,13 +400,12 @@ export async function settleClaim(payload) {
           await postClaimWriteOffJournal(tx, { ...claim, cogsTotal });
         });
 
-        const updated = await prisma.claim.update({
+        await prisma.claim.update({
           where: { id },
           data: { status: "Settled", resolution },
-          include: { items: { include: { product: true } } },
         });
-        await logClaimSettled(prisma, updated, resolution);
-        return success(updated);
+        const refreshed = await markClaimSettled(prisma, id, resolution);
+        return success(refreshed);
       }
     }
 
@@ -400,17 +429,16 @@ export async function settleClaim(payload) {
         return returnResult;
       }
 
-      const updated = await prisma.claim.update({
+      await prisma.claim.update({
         where: { id },
         data: {
           status: "Settled",
           resolution,
           purchaseReturnId: returnResult.data.id,
         },
-        include: { purchaseReturn: true, items: { include: { product: true } } },
       });
-      await logClaimSettled(prisma, updated, resolution);
-      return success(updated);
+      const refreshed = await markClaimSettled(prisma, id, resolution);
+      return success(refreshed);
     }
 
     return failure("Resolution is not valid for this claim type");

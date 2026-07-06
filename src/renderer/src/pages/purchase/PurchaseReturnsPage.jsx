@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import DataTable from "../../components/DataTable";
+import DocumentLifecyclePanel from "../../components/DocumentLifecyclePanel";
+import { lifecycleStatusColumn } from "../../utils/document-lifecycle-columns";
 import useDocIdHighlight from "../../hooks/useDocIdHighlight";
 import {
   calcPurchaseLine,
@@ -21,6 +23,7 @@ const listColumns = [
     cell: ({ row }) => row.original.vendor?.name ?? "-",
   },
   { accessorKey: "total", header: "Total" },
+  lifecycleStatusColumn,
 ];
 
 export default function PurchaseReturnsPage() {
@@ -30,6 +33,7 @@ export default function PurchaseReturnsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [selected, setSelected] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     date: todayInputValue(),
@@ -214,6 +218,15 @@ export default function PurchaseReturnsPage() {
           showActions={false}
           searchPlaceholder="Search returns..."
           highlightRowId={highlightRowId}
+          onRowClick={setSelected}
+        />
+      )}
+      {selected && (
+        <DocumentLifecyclePanel
+          documentType="PURCHASE_RETURN"
+          documentId={selected.id}
+          documentNumber={selected.number}
+          onRefresh={loadData}
         />
       )}
     </div>

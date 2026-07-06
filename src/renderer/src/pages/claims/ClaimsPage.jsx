@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import DataTable from "../../components/DataTable";
+import DocumentLifecyclePanel from "../../components/DocumentLifecyclePanel";
+import { lifecycleStatusColumn } from "../../utils/document-lifecycle-columns";
 import {
   calcPurchaseLine,
   calcPurchaseTotals,
@@ -29,6 +31,7 @@ export default function ClaimsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [selected, setSelected] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [settleTarget, setSettleTarget] = useState(null);
   const [settleResolution, setSettleResolution] = useState("Credit");
@@ -63,6 +66,7 @@ export default function ClaimsPage() {
       { accessorKey: "claimType", header: "Type" },
       { accessorKey: "status", header: "Status" },
       { accessorKey: "total", header: "Amount" },
+      lifecycleStatusColumn,
       {
         id: "actions",
         header: "Actions",
@@ -464,7 +468,21 @@ export default function ClaimsPage() {
       {loading ? (
         <p>Loading claims...</p>
       ) : (
-        <DataTable columns={columns} data={rows} showActions={false} searchPlaceholder="Search claims..." />
+        <DataTable
+          columns={columns}
+          data={rows}
+          showActions={false}
+          searchPlaceholder="Search claims..."
+          onRowClick={setSelected}
+        />
+      )}
+      {selected && (
+        <DocumentLifecyclePanel
+          documentType={selected.partyType === "Supplier" ? "SUPPLIER_CLAIM" : "CUSTOMER_CLAIM"}
+          documentId={selected.id}
+          documentNumber={selected.number}
+          onRefresh={loadData}
+        />
       )}
     </div>
   );

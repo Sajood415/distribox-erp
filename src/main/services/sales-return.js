@@ -6,6 +6,8 @@ import { normalizeSaleItems } from "./quotation";
 import { recordStockMovement } from "../domain/stock-movement-recorder";
 import { STOCK_MOVEMENT_TYPES } from "../core/stock-movement-types";
 import { SOURCE_DOCUMENT_TYPES } from "../core/account-roles";
+import { DOCUMENT_TYPES } from "../core/document-types";
+import { onDocumentCreated, onDocumentPosted } from "./document-lifecycle-service";
 
 function success(data) {
   return { success: true, data };
@@ -170,7 +172,18 @@ export async function saveSalesReturn(payload) {
         });
       }
 
+      await onDocumentCreated(tx, {
+        documentType: DOCUMENT_TYPES.SALES_RETURN,
+        documentId: salesReturn.id,
+        documentNumber: salesReturn.number,
+      });
       await postSalesReturnJournal(tx, salesReturn);
+      await onDocumentPosted(tx, {
+        documentType: DOCUMENT_TYPES.SALES_RETURN,
+        documentId: salesReturn.id,
+        documentNumber: salesReturn.number,
+        postedAt: salesReturn.date,
+      });
       return salesReturn;
     });
 

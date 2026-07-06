@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import DataTable from "../../components/DataTable";
+import DocumentLifecyclePanel from "../../components/DocumentLifecyclePanel";
+import { lifecycleStatusColumn } from "../../utils/document-lifecycle-columns";
 import { todayInputValue } from "../../utils/purchase";
 
 const slipColumns = [
@@ -26,6 +28,7 @@ const slipColumns = [
     cell: ({ row }) => row.original.invoices?.length ?? 0,
   },
   { accessorKey: "status", header: "Status" },
+  lifecycleStatusColumn,
 ];
 
 const STATUS_FLOW = {
@@ -43,6 +46,7 @@ export default function LoadSlipsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [selectedSlip, setSelectedSlip] = useState(null);
   const [form, setForm] = useState({
     date: todayInputValue(),
     deliveryManId: "",
@@ -217,7 +221,13 @@ export default function LoadSlipsPage() {
         <p>Loading load slips...</p>
       ) : (
         <>
-          <DataTable columns={slipColumns} data={slips} showActions={false} searchPlaceholder="Search load slips..." />
+          <DataTable
+            columns={slipColumns}
+            data={slips}
+            showActions={false}
+            searchPlaceholder="Search load slips..."
+            onRowClick={setSelectedSlip}
+          />
           <div className="table-extra-actions">
             {slips
               .filter((slip) => STATUS_FLOW[slip.status])
@@ -228,6 +238,14 @@ export default function LoadSlipsPage() {
               ))}
           </div>
         </>
+      )}
+      {selectedSlip && (
+        <DocumentLifecyclePanel
+          documentType="LOAD_SLIP"
+          documentId={selectedSlip.id}
+          documentNumber={selectedSlip.number}
+          onRefresh={loadData}
+        />
       )}
     </div>
   );

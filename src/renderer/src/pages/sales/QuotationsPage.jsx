@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import DataTable from "../../components/DataTable";
+import DocumentLifecyclePanel from "../../components/DocumentLifecyclePanel";
+import { lifecycleStatusColumn } from "../../utils/document-lifecycle-columns";
 import {
   calcPurchaseLine,
   calcPurchaseTotals,
@@ -21,12 +23,14 @@ const listColumns = [
   },
   { accessorKey: "total", header: "Total" },
   { accessorKey: "status", header: "Status" },
+  lifecycleStatusColumn,
 ];
 
 export default function QuotationsPage() {
   const [lookups, setLookups] = useState({ customers: [], products: [], units: [], salesmen: [] });
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -213,7 +217,13 @@ export default function QuotationsPage() {
         <p>Loading...</p>
       ) : (
         <div className="data-table-wrap">
-          <DataTable columns={listColumns} data={rows} showActions={false} searchPlaceholder="Search quotes..." />
+          <DataTable
+            columns={listColumns}
+            data={rows}
+            showActions={false}
+            searchPlaceholder="Search quotes..."
+            onRowClick={setSelected}
+          />
           <div className="table-extra-actions">
             {rows
               .filter((row) => row.status === "Open")
@@ -224,6 +234,14 @@ export default function QuotationsPage() {
               ))}
           </div>
         </div>
+      )}
+      {selected && (
+        <DocumentLifecyclePanel
+          documentType="QUOTATION"
+          documentId={selected.id}
+          documentNumber={selected.number}
+          onRefresh={loadData}
+        />
       )}
     </div>
   );

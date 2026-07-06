@@ -5,6 +5,8 @@ import { calcAdjustmentValue, postStockAdjustmentJournal } from "./inventory-acc
 import { recordStockMovement } from "../domain/stock-movement-recorder";
 import { STOCK_MOVEMENT_TYPES } from "../core/stock-movement-types";
 import { getStockQuantity, getStockValuation } from "../domain/stock-quantity";
+import { DOCUMENT_TYPES } from "../core/document-types";
+import { onDocumentCreated, onDocumentPosted } from "./document-lifecycle-service";
 
 function success(data) {
   return { success: true, data };
@@ -321,6 +323,17 @@ export async function saveStockAdjustment(payload) {
 
       await postStockAdjustmentJournal(tx, adjustment);
       await recordAdjustmentMovement(tx, adjustment);
+      await onDocumentCreated(tx, {
+        documentType: DOCUMENT_TYPES.STOCK_ADJUSTMENT,
+        documentId: adjustment.id,
+        documentNumber: adjustment.number,
+      });
+      await onDocumentPosted(tx, {
+        documentType: DOCUMENT_TYPES.STOCK_ADJUSTMENT,
+        documentId: adjustment.id,
+        documentNumber: adjustment.number,
+        postedAt: adjustment.date,
+      });
       return adjustment;
     });
 

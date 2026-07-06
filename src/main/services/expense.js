@@ -4,6 +4,8 @@ import { postJournal } from "./posting-engine";
 import { ACCOUNT_ROLES, SOURCE_DOCUMENT_TYPES } from "../core/account-roles";
 import { logOperation } from "./operation-log";
 import { EVENT_TYPES } from "./event-service";
+import { DOCUMENT_TYPES } from "../core/document-types";
+import { onDocumentCreated, onDocumentPosted } from "./document-lifecycle-service";
 
 function success(data) {
   return { success: true, data };
@@ -57,6 +59,18 @@ export async function saveExpense(payload) {
           { accountRole: ACCOUNT_ROLES.CLAIMS_EXPENSE, debit: amount, credit: 0 },
           { accountRole: ACCOUNT_ROLES.CASH, debit: 0, credit: amount },
         ],
+      });
+
+      await onDocumentCreated(tx, {
+        documentType: DOCUMENT_TYPES.EXPENSE,
+        documentId: voucher.id,
+        documentNumber: voucher.number,
+      });
+      await onDocumentPosted(tx, {
+        documentType: DOCUMENT_TYPES.EXPENSE,
+        documentId: voucher.id,
+        documentNumber: voucher.number,
+        postedAt: voucher.date,
       });
 
       await logOperation(tx, {

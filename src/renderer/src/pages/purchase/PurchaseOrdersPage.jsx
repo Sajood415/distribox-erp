@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import DataTable from "../../components/DataTable";
+import DocumentLifecyclePanel from "../../components/DocumentLifecyclePanel";
+import { lifecycleStatusColumn } from "../../utils/document-lifecycle-columns";
 
 const columns = [
   { accessorKey: "number", header: "PO #" },
@@ -11,12 +13,14 @@ const columns = [
   { accessorKey: "vendor", header: "Vendor", cell: ({ row }) => row.original.vendor?.name ?? "-" },
   { accessorKey: "status", header: "Status" },
   { accessorKey: "total", header: "Total" },
+  lifecycleStatusColumn,
 ];
 
 export default function PurchaseOrdersPage() {
   const [rows, setRows] = useState([]);
   const [lookups, setLookups] = useState({ vendors: [], products: [], warehouses: [], units: [] });
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({
     vendorId: "",
     warehouseId: "",
@@ -121,6 +125,15 @@ export default function PurchaseOrdersPage() {
           data={rows}
           showActions={false}
           searchPlaceholder="Search PO..."
+          onRowClick={setSelected}
+        />
+      )}
+      {selected && (
+        <DocumentLifecyclePanel
+          documentType="PURCHASE_ORDER"
+          documentId={selected.id}
+          documentNumber={selected.number}
+          onRefresh={load}
         />
       )}
     </div>

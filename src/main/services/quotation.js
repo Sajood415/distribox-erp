@@ -1,5 +1,7 @@
 import { getCompanyPrisma } from "../db/init";
 import { calcLineNet, calcLineVat, roundMoney } from "../utils/money";
+import { DOCUMENT_TYPES } from "../core/document-types";
+import { onDocumentCreated } from "./document-lifecycle-service";
 
 function success(data) {
   return { success: true, data };
@@ -89,31 +91,39 @@ export async function saveQuotation(payload) {
   const total = roundMoney(subtotal + taxTotal);
 
   try {
-    const quotation = await prisma.quotation.create({
-      data: {
-        number: payload.number || (await nextNumber(prisma, "quotation", "QT")),
-        date: new Date(payload.date),
-        validUntil: new Date(payload.validUntil),
-        customerId: Number(payload.customerId),
-        salesmanId: payload.salesmanId ? Number(payload.salesmanId) : null,
-        subtotal,
-        taxTotal,
-        total,
-        remarks: payload.remarks?.trim() || null,
-        items: {
-          create: items.map((item) => ({
-            productId: item.productId,
-            unitId: item.unitId,
-            quantity: item.quantity,
-            price: item.price,
-            discount: item.discount,
-            vatPercent: item.vatPercent,
-            lineTotal: item.lineTotal,
-          })),
+    const result = await prisma.$transaction(async (tx) => {
+      const quotation = await tx.quotation.create({
+        data: {
+          number: payload.number || (await nextNumber(tx, "quotation", "QT")),
+          date: new Date(payload.date),
+          validUntil: new Date(payload.validUntil),
+          customerId: Number(payload.customerId),
+          salesmanId: payload.salesmanId ? Number(payload.salesmanId) : null,
+          subtotal,
+          taxTotal,
+          total,
+          remarks: payload.remarks?.trim() || null,
+          items: {
+            create: items.map((item) => ({
+              productId: item.productId,
+              unitId: item.unitId,
+              quantity: item.quantity,
+              price: item.price,
+              discount: item.discount,
+              vatPercent: item.vatPercent,
+              lineTotal: item.lineTotal,
+            })),
+          },
         },
-      },
+      });
+      await onDocumentCreated(tx, {
+        documentType: DOCUMENT_TYPES.QUOTATION,
+        documentId: quotation.id,
+        documentNumber: quotation.number,
+      });
+      return quotation;
     });
-    return success(quotation);
+    return success(result);
   } catch (error) {
     return failure(error.message || "Failed to save quotation");
   }
