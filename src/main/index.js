@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow } from "electron";
 import { join } from "path";
 import { registerIpcHandlers } from "./ipc/handlers";
 import { initDatabase } from "./db/init";
+import { startScheduler, stopScheduler } from "./scheduler/scheduler";
 
 const isDev = !app.isPackaged;
 
@@ -40,6 +41,7 @@ function createWindow() {
 app.whenReady().then(async () => {
   await initDatabase();
   registerIpcHandlers();
+  startScheduler();
   createWindow();
 
   app.on("activate", () => {
@@ -47,6 +49,10 @@ app.whenReady().then(async () => {
       createWindow();
     }
   });
+});
+
+app.on("before-quit", () => {
+  stopScheduler();
 });
 
 app.on("window-all-closed", () => {

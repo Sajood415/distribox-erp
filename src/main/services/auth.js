@@ -1,8 +1,9 @@
 import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { connectCompanyDatabase, getMasterPrisma } from "../db/init";
-
-const SESSION_HOURS = 12;
+import { getBusinessDate } from "../domain/business-date";
+import { resolveSession, getSessionExpiry } from "./session-service";
+import { logMasterAudit } from "./audit-service";
 
 export async function loginUser({ username, password }) {
   const prisma = getMasterPrisma();
@@ -21,7 +22,7 @@ export async function loginUser({ username, password }) {
   }
 
   const token = randomUUID();
-  const expiresAt = new Date(Date.now() + SESSION_HOURS * 60 * 60 * 1000);
+  const expiresAt = getSessionExpiry();
 
   await prisma.userSession.create({
     data: {
@@ -31,14 +32,13 @@ export async function loginUser({ username, password }) {
     },
   });
 
-  await prisma.auditLog.create({
-    data: {
-      userId: user.id,
-      table: "User",
-      recordId: user.id,
-      action: "LOGIN",
-      details: `User ${user.username} logged in`,
-    },
+  await logMasterAudit(null, {
+    userId: user.id,
+    companyId: user.companyId,
+    table: "User",
+    recordId: user.id,
+    action: "LOGIN",
+    details: { username: user.username },
   });
 
   return {
@@ -49,7 +49,6 @@ export async function loginUser({ username, password }) {
         id: user.id,
         username: user.username,
         role: user.role.name,
-        permissions: JSON.parse(user.role.permissions),
         companyId: user.companyId,
         company: user.company
           ? {
@@ -65,48 +64,35 @@ export async function loginUser({ username, password }) {
 }
 
 export async function validateSession(token) {
+  const result = await resolveSession(token);
+  if (!result.success) {
+    return { success: false };
+  }
+  return { success: true, data: { user: result.data.user } };
+}
+
+export async function logoutUser(token, ctx = null) {
   const prisma = getMasterPrisma();
   const session = await prisma.userSession.findUnique({
     where: { token },
-    include: {
-      user: {
-        include: { role: true, company: true },
-      },
-    },
+    include: { user: true },
   });
 
-  if (!session || session.expiresAt < new Date() || !session.user.isActive) {
-    return { success: false };
-  }
-
-  if (session.user.company?.dbFile) {
-    await connectCompanyDatabase(session.user.company.dbFile);
-  }
-
-  return {
-    success: true,
-    data: {
-      user: {
-        id: session.user.id,
-        username: session.user.username,
-        role: session.user.role.name,
-        permissions: JSON.parse(session.user.role.permissions),
-        companyId: session.user.companyId,
-        company: session.user.company
-          ? {
-              id: session.user.company.id,
-              name: session.user.company.name,
-              code: session.user.company.code,
-              dbFile: session.user.company.dbFile,
-            }
-          : null,
-      },
-    },
-  };
-}
-
-export async function logoutUser(token) {
-  const prisma = getMasterPrisma();
   await prisma.userSession.deleteMany({ where: { token } });
+
+  const userId = ctx?.user?.id ?? session?.userId ?? null;
+  const companyId = ctx?.user?.companyId ?? session?.user?.companyId ?? null;
+
+  if (userId) {
+    await logMasterAudit(null, {
+      userId,
+      companyId,
+      table: "User",
+      recordId: userId,
+      action: "LOGOUT",
+      details: { username: session?.user?.username ?? ctx?.user?.username },
+    });
+  }
+
   return { success: true };
 }

@@ -29,6 +29,7 @@ import LoadSlipsPage from "./pages/sales/LoadSlipsPage";
 import VouchersPage from "./pages/accounting/VouchersPage";
 import VoucherFormPage from "./pages/accounting/VoucherFormPage";
 import CashbookPage from "./pages/accounting/CashbookPage";
+import BankbookPage from "./pages/accounting/BankbookPage";
 import TrialBalancePage from "./pages/accounting/TrialBalancePage";
 import JournalPage from "./pages/accounting/JournalPage";
 import ClaimsPage from "./pages/claims/ClaimsPage";
@@ -41,9 +42,11 @@ import CustomerReportsPage from "./pages/reports/CustomerReportsPage";
 import SalesmanReportsPage from "./pages/reports/SalesmanReportsPage";
 import ProductReportsPage from "./pages/reports/ProductReportsPage";
 import PurchaseReportPage from "./pages/reports/PurchaseReportPage";
+import DatabaseHealthPage from "./pages/tools/DatabaseHealthPage";
 import ToolsHubPage from "./pages/tools/ToolsHubPage";
 import BackupPage from "./pages/tools/BackupPage";
 import ImportExportPage from "./pages/tools/ImportExportPage";
+import SettingsPage from "./pages/settings/SettingsPage";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -111,6 +114,7 @@ function AppRoutes() {
         <Route path="accounting/vouchers" element={<VouchersPage />} />
         <Route path="accounting/vouchers/new" element={<VoucherFormPage />} />
         <Route path="accounting/cashbook" element={<CashbookPage />} />
+        <Route path="accounting/bankbook" element={<BankbookPage />} />
         <Route path="accounting/trial-balance" element={<TrialBalancePage />} />
         <Route path="accounting/journal" element={<JournalPage />} />
         <Route path="claims" element={<ClaimsPage />} />
@@ -125,7 +129,9 @@ function AppRoutes() {
         <Route path="reports/purchases" element={<PurchaseReportPage />} />
         <Route path="tools" element={<ToolsHubPage />} />
         <Route path="tools/backup" element={<BackupPage />} />
+        <Route path="tools/database-health" element={<DatabaseHealthPage />} />
         <Route path="tools/import-export" element={<ImportExportPage />} />
+        <Route path="settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

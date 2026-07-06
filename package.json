@@ -7,9 +7,16 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "postinstall": "prisma generate --schema prisma/master.prisma && prisma generate --schema prisma/company.prisma",
-    "db:push": "prisma db push --schema prisma/master.prisma && prisma db push --schema prisma/company.prisma",
-    "db:studio": "prisma studio"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "postinstall": "prisma generate --schema prisma/master/schema.prisma && prisma generate --schema prisma/company/schema.prisma",
+    "db:migrate:master": "prisma migrate deploy --schema prisma/master/schema.prisma",
+    "db:migrate:company": "prisma migrate deploy --schema prisma/company/schema.prisma",
+    "db:migrate": "npm run db:migrate:master && npm run db:migrate:company",
+    "db:migrate:dev:master": "prisma migrate dev --schema prisma/master/schema.prisma",
+    "db:migrate:dev:company": "prisma migrate dev --schema prisma/company/schema.prisma",
+    "db:studio:master": "prisma studio --schema prisma/master/schema.prisma",
+    "db:studio:company": "prisma studio --schema prisma/company/schema.prisma"
   },
   "keywords": [],
   "author": "",
@@ -22,7 +29,8 @@
     "electron-builder": "^26.8.1",
     "electron-vite": "^3.1.0",
     "prisma": "^6.19.3",
-    "vite": "^6.4.2"
+    "vite": "^6.4.2",
+    "vitest": "^3.2.7"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

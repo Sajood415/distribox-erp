@@ -1,5 +1,12 @@
 import { getCompanyPrisma } from "../db/init";
 import { roundMoney } from "../utils/money";
+import { ACCOUNT_ROLES } from "../core/account-roles";
+import { resolveAccountIdByRole } from "./account-mapping-service";
+import { listAccounts } from "../repositories/account-repository";
+import {
+  findJournalLinesInRange,
+  findJournalLinesCumulative,
+} from "../repositories/journal-repository";
 
 function success(data) {
   return { success: true, data };
@@ -19,15 +26,10 @@ function parseAsOfDate(payload = {}) {
 }
 
 async function getLedgerBalances(prisma, { start, end, cumulative = false }) {
-  const accounts = await prisma.account.findMany({ orderBy: { code: "asc" } });
-  const dateFilter = cumulative
-    ? { lte: end }
-    : { gte: start, lte: end };
-
-  const lines = await prisma.ledgerLine.findMany({
-    where: { entry: { date: dateFilter } },
-    include: { account: true },
-  });
+  const accounts = await listAccounts(prisma);
+  const lines = cumulative
+    ? await findJournalLinesCumulative(prisma, { end })
+    : await findJournalLinesInRange(prisma, { start, end });
 
   return accounts.map((account) => {
     const accountLines = lines.filter((line) => line.accountId === account.id);
@@ -181,13 +183,13 @@ export async function getBalanceSheet(payload = {}) {
     .filter((row) => row.type === "Equity" && row.balance !== 0)
     .map((row) => ({ ...row, amount: roundMoney(-row.balance) }));
 
-  const incomeLines = await prisma.ledgerLine.findMany({
-    where: { entry: { date: { lte: asOf } }, account: { type: "Income" } },
-    include: { account: true },
+  const incomeLines = await findJournalLinesCumulative(prisma, {
+    end: asOf,
+    accountType: "Income",
   });
-  const expenseLines = await prisma.ledgerLine.findMany({
-    where: { entry: { date: { lte: asOf } }, account: { type: "Expense" } },
-    include: { account: true },
+  const expenseLines = await findJournalLinesCumulative(prisma, {
+    end: asOf,
+    accountType: "Expense",
   });
 
   const retainedEarnings = roundMoney(
@@ -238,8 +240,12 @@ export async function getIncomeStatement(payload = {}) {
     }))
     .filter((row) => row.amount !== 0);
 
-  const cogsRows = expenseRows.filter((row) => row.code === "5000");
-  const otherExpenses = expenseRows.filter((row) => row.code !== "5000");
+  const cogsAccountId = await resolveAccountIdByRole(prisma, ACCOUNT_ROLES.COGS);
+  const cogsAccount = await prisma.account.findUnique({ where: { id: cogsAccountId } });
+  const cogsCode = cogsAccount?.code;
+
+  const cogsRows = expenseRows.filter((row) => row.code === cogsCode);
+  const otherExpenses = expenseRows.filter((row) => row.code !== cogsCode);
 
   const totalIncome = roundMoney(incomeRows.reduce((sum, row) => sum + row.amount, 0));
   const totalCogs = roundMoney(cogsRows.reduce((sum, row) => sum + row.amount, 0));

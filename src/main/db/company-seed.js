@@ -1,3 +1,6 @@
+import { seedCompanySettings, applyRuntimeSettings } from "../services/settings-service";
+import { seedAccountMappings } from "../services/account-mapping-service";
+
 const DEFAULT_UNITS = [
   { code: "PC", name: "Piece" },
   { code: "PK", name: "Pack" },
@@ -35,4 +38,8 @@ export async function seedCompanyDatabase(prisma) {
   if (deliveryCount === 0) {
     await prisma.deliveryMan.createMany({ data: DEFAULT_DELIVERY_MEN });
   }
+
+  await seedCompanySettings(prisma);
+  await seedAccountMappings(prisma);
+  await applyRuntimeSettings();
 }

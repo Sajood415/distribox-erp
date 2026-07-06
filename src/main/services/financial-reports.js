@@ -1,5 +1,12 @@
 import { getCompanyPrisma } from "../db/init";
 import { roundMoney } from "../utils/money";
+import { resolveAccountIdByRole } from "./account-mapping-service";
+import { ACCOUNT_ROLES } from "../core/account-roles";
+import {
+  findJournalLinesInRange,
+  listJournalEntries as fetchJournalEntries,
+} from "../repositories/journal-repository";
+import { listAccounts } from "../repositories/account-repository";
 
 function success(data) {
   return { success: true, data };
@@ -12,19 +19,49 @@ function parseDateRange(payload = {}) {
   return { start, end };
 }
 
+async function buildAccountBook(payload, accountRole) {
+  const prisma = getCompanyPrisma();
+  const { start, end } = parseDateRange(payload);
+  const accountId = await resolveAccountIdByRole(prisma, accountRole);
+
+  const account = await prisma.account.findUnique({ where: { id: accountId } });
+  if (!account) {
+    return success({ opening: 0, closing: 0, rows: [], receipts: 0, payments: 0, account: null });
+  }
+
+  const lines = await findJournalLinesInRange(prisma, { start, end, accountId });
+
+  let running = 0;
+  const rows = lines.map((line) => {
+    running = roundMoney(running + line.debit - line.credit);
+    return {
+      date: line.journalEntry.date,
+      reference: line.journalEntry.referenceNumber || line.journalEntry.reference,
+      description: line.journalEntry.description,
+      voucherType: line.journalEntry.voucher?.type ?? line.journalEntry.sourceType,
+      debit: line.debit,
+      credit: line.credit,
+      balance: running,
+      narrative: line.description,
+    };
+  });
+
+  const receipts = roundMoney(rows.reduce((sum, row) => sum + row.debit, 0));
+  const payments = roundMoney(rows.reduce((sum, row) => sum + row.credit, 0));
+
+  return success({
+    account,
+    receipts,
+    payments,
+    closing: running,
+    rows,
+  });
+}
+
 export async function listJournalEntries(payload = {}) {
   const prisma = getCompanyPrisma();
   const { start, end } = parseDateRange(payload);
-
-  const data = await prisma.journalEntry.findMany({
-    where: { date: { gte: start, lte: end } },
-    orderBy: { date: "desc" },
-    include: {
-      lines: { include: { account: true } },
-      voucher: true,
-    },
-  });
-
+  const data = await fetchJournalEntries(prisma, { start, end });
   return success(data);
 }
 
@@ -32,29 +69,26 @@ export async function getTrialBalance(payload = {}) {
   const prisma = getCompanyPrisma();
   const { start, end } = parseDateRange(payload);
 
-  const accounts = await prisma.account.findMany({ orderBy: { code: "asc" } });
-  const lines = await prisma.ledgerLine.findMany({
-    where: {
-      entry: { date: { gte: start, lte: end } },
-    },
-    include: { account: true },
-  });
+  const accounts = await listAccounts(prisma);
+  const lines = await findJournalLinesInRange(prisma, { start, end });
 
-  const balances = accounts.map((account) => {
-    const accountLines = lines.filter((line) => line.accountId === account.id);
-    const debit = roundMoney(accountLines.reduce((sum, line) => sum + line.debit, 0));
-    const credit = roundMoney(accountLines.reduce((sum, line) => sum + line.credit, 0));
-    const balance = roundMoney(debit - credit);
-    return {
-      accountId: account.id,
-      code: account.code,
-      name: account.name,
-      type: account.type,
-      debit,
-      credit,
-      balance,
-    };
-  }).filter((row) => row.debit > 0 || row.credit > 0);
+  const balances = accounts
+    .map((account) => {
+      const accountLines = lines.filter((line) => line.accountId === account.id);
+      const debit = roundMoney(accountLines.reduce((sum, line) => sum + line.debit, 0));
+      const credit = roundMoney(accountLines.reduce((sum, line) => sum + line.credit, 0));
+      const balance = roundMoney(debit - credit);
+      return {
+        accountId: account.id,
+        code: account.code,
+        name: account.name,
+        type: account.type,
+        debit,
+        credit,
+        balance,
+      };
+    })
+    .filter((row) => row.debit > 0 || row.credit > 0);
 
   const totalDebit = roundMoney(balances.reduce((sum, row) => sum + row.debit, 0));
   const totalCredit = roundMoney(balances.reduce((sum, row) => sum + row.credit, 0));
@@ -68,51 +102,18 @@ export async function getTrialBalance(payload = {}) {
 }
 
 export async function getCashbook(payload = {}) {
-  const prisma = getCompanyPrisma();
-  const { start, end } = parseDateRange(payload);
-  const cashAccount = await prisma.account.findUnique({ where: { code: "1100" } });
+  return buildAccountBook(payload, ACCOUNT_ROLES.CASH);
+}
 
-  if (!cashAccount) {
-    return success({ opening: 0, closing: 0, rows: [], receipts: 0, payments: 0 });
-  }
-
-  const lines = await prisma.ledgerLine.findMany({
-    where: {
-      accountId: cashAccount.id,
-      entry: { date: { gte: start, lte: end } },
-    },
-    include: {
-      entry: { include: { voucher: true } },
-      account: true,
-    },
-    orderBy: { entry: { date: "asc" } },
-  });
-
-  let running = 0;
-  const rows = lines.map((line) => {
-    running = roundMoney(running + line.debit - line.credit);
-    return {
-      date: line.entry.date,
-      reference: line.entry.reference,
-      description: line.entry.description,
-      voucherType: line.entry.voucher?.type ?? line.entry.sourceType,
-      debit: line.debit,
-      credit: line.credit,
-      balance: running,
-      narrative: line.narrative,
+export async function getBankbook(payload = {}) {
+  const book = await buildAccountBook(payload, ACCOUNT_ROLES.BANK);
+  if (book.success && book.data) {
+    book.data.reconciliation = {
+      status: "foundation",
+      note: "Bank reconciliation workflow will match statement lines in a future phase.",
     };
-  });
-
-  const receipts = roundMoney(rows.reduce((sum, row) => sum + row.debit, 0));
-  const payments = roundMoney(rows.reduce((sum, row) => sum + row.credit, 0));
-
-  return success({
-    account: cashAccount,
-    receipts,
-    payments,
-    closing: running,
-    rows,
-  });
+  }
+  return book;
 }
 
 export async function getAccountLedger(payload) {
@@ -128,26 +129,19 @@ export async function getAccountLedger(payload) {
     return { success: false, error: "Account not found" };
   }
 
-  const lines = await prisma.ledgerLine.findMany({
-    where: {
-      accountId,
-      entry: { date: { gte: start, lte: end } },
-    },
-    include: { entry: true },
-    orderBy: { entry: { date: "asc" } },
-  });
+  const lines = await findJournalLinesInRange(prisma, { start, end, accountId });
 
   let running = 0;
   const rows = lines.map((line) => {
     running = roundMoney(running + line.debit - line.credit);
     return {
-      date: line.entry.date,
-      reference: line.entry.reference,
-      description: line.entry.description,
+      date: line.journalEntry.date,
+      reference: line.journalEntry.referenceNumber || line.journalEntry.reference,
+      description: line.journalEntry.description,
       debit: line.debit,
       credit: line.credit,
       balance: running,
-      narrative: line.narrative,
+      narrative: line.description,
     };
   });
 
@@ -179,10 +173,7 @@ export async function getProfitAndLoss(payload = {}) {
   const prisma = getCompanyPrisma();
   const { start, end } = parseDateRange(payload);
 
-  const lines = await prisma.ledgerLine.findMany({
-    where: { entry: { date: { gte: start, lte: end } } },
-    include: { account: true },
-  });
+  const lines = await findJournalLinesInRange(prisma, { start, end });
 
   const income = roundMoney(
     lines

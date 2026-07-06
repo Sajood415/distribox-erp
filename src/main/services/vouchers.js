@@ -1,6 +1,8 @@
 import { getCompanyPrisma } from "../db/init";
 import { roundMoney } from "../utils/money";
-import { postJournalEntry } from "./accounting";
+import { postJournal } from "./posting-engine";
+import { SOURCE_DOCUMENT_TYPES } from "../core/account-roles";
+import { getAccountMappings } from "./account-mapping-service";
 
 function success(data) {
   return { success: true, data };
@@ -66,7 +68,11 @@ function validateBalanced(lines) {
 export async function getAccountingLookups() {
   const prisma = getCompanyPrisma();
   const accounts = await prisma.account.findMany({ orderBy: { code: "asc" } });
-  return success({ accounts });
+  const mappingsResult = await getAccountMappings();
+  return success({
+    accounts,
+    mappings: mappingsResult.success ? mappingsResult.data.mappings : {},
+  });
 }
 
 export async function listVouchers(payload = {}) {
@@ -103,10 +109,12 @@ export async function saveVoucher(payload) {
 
     const result = await prisma.$transaction(async (tx) => {
       const number = payload.number || (await nextVoucherNumber(tx, type));
-      const journal = await postJournalEntry(tx, {
-        date: payload.date,
+      const journal = await postJournal(tx, {
+        referenceNumber: number,
+        sourceDocumentType: SOURCE_DOCUMENT_TYPES.VOUCHER,
+        sourceDocumentId: null,
+        postingDate: payload.date,
         description: payload.description?.trim() || `${type} Voucher ${number}`,
-        reference: number,
         sourceType: type,
         lines,
       });

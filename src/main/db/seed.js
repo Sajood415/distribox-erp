@@ -1,66 +1,23 @@
 import bcrypt from "bcryptjs";
 
-const DEFAULT_PERMISSIONS = {
-  admin: [
-    "dashboard.view",
-    "masters.view",
-    "masters.edit",
-    "inventory.view",
-    "inventory.edit",
-    "sales.view",
-    "sales.edit",
-    "purchase.view",
-    "purchase.edit",
-    "accounting.view",
-    "accounting.edit",
-    "reports.view",
-    "settings.view",
-    "settings.edit",
-    "users.manage",
-  ],
-  salesman: [
-    "dashboard.view",
-    "masters.view",
-    "sales.view",
-    "sales.edit",
-    "reports.view",
-  ],
-  accountant: [
-    "dashboard.view",
-    "masters.view",
-    "purchase.view",
-    "purchase.edit",
-    "accounting.view",
-    "accounting.edit",
-    "reports.view",
-  ],
-};
+const ADMIN_ROLE_NAME = "Admin";
 
 export async function seedMasterDatabase(prisma) {
-  const roleCount = await prisma.role.count();
-  if (roleCount > 0) {
-    return;
+  let adminRole = await prisma.role.findUnique({ where: { name: ADMIN_ROLE_NAME } });
+
+  if (!adminRole) {
+    adminRole = await prisma.role.create({
+      data: {
+        name: ADMIN_ROLE_NAME,
+        permissions: "[]",
+      },
+    });
   }
 
-  const adminRole = await prisma.role.create({
-    data: {
-      name: "Admin",
-      permissions: JSON.stringify(DEFAULT_PERMISSIONS.admin),
-    },
-  });
-
-  await prisma.role.createMany({
-    data: [
-      {
-        name: "Salesman",
-        permissions: JSON.stringify(DEFAULT_PERMISSIONS.salesman),
-      },
-      {
-        name: "Accountant",
-        permissions: JSON.stringify(DEFAULT_PERMISSIONS.accountant),
-      },
-    ],
-  });
+  const userCount = await prisma.user.count();
+  if (userCount > 0) {
+    return;
+  }
 
   const defaultCompany = await prisma.company.create({
     data: {

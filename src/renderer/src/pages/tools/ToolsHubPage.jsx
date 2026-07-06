@@ -5,6 +5,7 @@ const tools = [
     title: "Data Safety",
     items: [
       { to: "/tools/backup", label: "Backup & Restore", desc: "Backup or restore master and company databases" },
+      { to: "/tools/database-health", label: "Database Health", desc: "Journal balance and mapping integrity checks" },
     ],
   },
   {

@@ -16,12 +16,14 @@ export function AuthProvider({ children }) {
         return;
       }
 
+      window.api.session.setToken(savedToken);
       const result = await window.api.auth.validate(savedToken);
       if (result.success) {
         setToken(savedToken);
         setUser(result.data.user);
       } else {
         localStorage.removeItem(SESSION_KEY);
+        window.api.session.setToken(null);
       }
       setLoading(false);
     }
@@ -37,6 +39,7 @@ export function AuthProvider({ children }) {
 
     const sessionToken = result.data.token;
     localStorage.setItem(SESSION_KEY, sessionToken);
+    window.api.session.setToken(sessionToken);
     setToken(sessionToken);
     setUser(result.data.user);
     return result;
@@ -47,15 +50,13 @@ export function AuthProvider({ children }) {
       await window.api.auth.logout(token);
     }
     localStorage.removeItem(SESSION_KEY);
+    window.api.session.setToken(null);
     setToken(null);
     setUser(null);
   }
 
   async function selectCompany(companyId) {
-    const result = await window.api.company.select({
-      userId: user.id,
-      companyId,
-    });
+    const result = await window.api.company.select({ companyId });
 
     if (result.success) {
       setUser((current) => ({

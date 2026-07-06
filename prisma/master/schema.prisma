@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../node_modules/@prisma/master-client"
+  output   = "../../node_modules/@prisma/master-client"
 }
 
 datasource db {
@@ -26,16 +26,16 @@ model Role {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  username     String   @unique
+  id           Int           @id @default(autoincrement())
+  username     String        @unique
   passwordHash String
   roleId       Int
   companyId    Int?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  role         Role     @relation(fields: [roleId], references: [id])
-  company      Company? @relation(fields: [companyId], references: [id])
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  role         Role          @relation(fields: [roleId], references: [id])
+  company      Company?      @relation(fields: [companyId], references: [id])
   sessions     UserSession[]
 }
 
@@ -51,9 +51,24 @@ model UserSession {
 model AuditLog {
   id        Int      @id @default(autoincrement())
   userId    Int?
+  companyId Int?
   table     String
   recordId  Int
   action    String
   details   String?
   timestamp DateTime @default(now())
+}
+
+model JobRunLog {
+  id               Int       @id @default(autoincrement())
+  jobName          String
+  startedAt        DateTime
+  finishedAt       DateTime?
+  status           String
+  error            String?
+  durationMs       Int?
+  recordsProcessed Int       @default(0)
+  createdAt        DateTime  @default(now())
+
+  @@index([jobName, startedAt])
 }

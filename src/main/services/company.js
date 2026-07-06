@@ -1,4 +1,5 @@
 import { getMasterPrisma, connectCompanyDatabase } from "../db/init";
+import { logMasterAudit } from "./audit-service";
 
 export async function listCompanies() {
   const prisma = getMasterPrisma();
@@ -9,7 +10,7 @@ export async function listCompanies() {
   return { success: true, data: companies };
 }
 
-export async function createCompany({ name, code }) {
+export async function createCompany({ name, code }, ctx) {
   const prisma = getMasterPrisma();
   const normalizedCode = code.trim().toUpperCase();
 
@@ -32,11 +33,26 @@ export async function createCompany({ name, code }) {
 
   await connectCompanyDatabase(dbFile);
 
+  await logMasterAudit(null, {
+    userId: ctx?.user?.id,
+    companyId: company.id,
+    table: "Company",
+    recordId: company.id,
+    action: "CREATE",
+    details: { code: company.code, name: company.name },
+  });
+
   return { success: true, data: company };
 }
 
-export async function selectCompany({ userId, companyId }) {
+export async function selectCompany({ companyId }, ctx) {
   const prisma = getMasterPrisma();
+  const userId = ctx?.user?.id;
+
+  if (!userId) {
+    return { success: false, error: "Unauthorized", code: "UNAUTHORIZED" };
+  }
+
   const company = await prisma.company.findUnique({ where: { id: companyId } });
 
   if (!company) {
@@ -49,6 +65,15 @@ export async function selectCompany({ userId, companyId }) {
   });
 
   await connectCompanyDatabase(company.dbFile);
+
+  await logMasterAudit(null, {
+    userId,
+    companyId: company.id,
+    table: "Company",
+    recordId: company.id,
+    action: "SELECT",
+    details: { code: company.code },
+  });
 
   return {
     success: true,

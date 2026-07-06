@@ -48,18 +48,19 @@ export default function VoucherFormPage() {
       const result = await window.api.accounting.lookups();
       if (result.success) {
         setAccounts(result.data.accounts);
-        const cash = result.data.accounts.find((a) => a.code === "1100");
-        const bank = result.data.accounts.find((a) => a.code === "1200");
-        const ap = result.data.accounts.find((a) => a.code === "2100");
-        const ar = result.data.accounts.find((a) => a.code === "1400");
+        const mappings = result.data.mappings || {};
+        const cashId = mappings.CASH?.accountId;
+        const bankId = mappings.BANK?.accountId;
+        const apId = mappings.ACCOUNTS_PAYABLE?.accountId;
+        const arId = mappings.ACCOUNTS_RECEIVABLE?.accountId;
         setForm((current) => ({
           ...current,
           debitAccountId: current.type === "Receiving" || current.type === "BankReceiving"
-            ? String(bank?.id || cash?.id || "")
-            : String(ap?.id || ""),
+            ? String(bankId || cashId || "")
+            : String(apId || ""),
           creditAccountId: current.type === "Receiving" || current.type === "BankReceiving"
-            ? String(ar?.id || "")
-            : String(cash?.id || ""),
+            ? String(arId || "")
+            : String(bankId || cashId || ""),
         }));
       }
       setLoading(false);

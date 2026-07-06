@@ -1,26 +1,52 @@
 import { contextBridge, ipcRenderer } from "electron";
 
+let sessionToken = null;
+
+function invoke(channel, payload) {
+  if (payload === undefined) {
+    return ipcRenderer.invoke(channel, { _token: sessionToken });
+  }
+
+  const enriched =
+    typeof payload === "object" && payload !== null && !Array.isArray(payload)
+      ? { ...payload, _token: sessionToken }
+      : { _payload: payload, _token: sessionToken };
+
+  return ipcRenderer.invoke(channel, enriched);
+}
+
 function masterApi(entity) {
   return {
-    list: () => ipcRenderer.invoke(`masters:${entity}:list`),
-    save: (data) => ipcRenderer.invoke(`masters:${entity}:save`, data),
-    delete: (id) => ipcRenderer.invoke(`masters:${entity}:delete`, id),
+    list: () => invoke(`masters:${entity}:list`),
+    save: (data) => invoke(`masters:${entity}:save`, data),
+    delete: (id) => invoke(`masters:${entity}:delete`, { id }),
   };
 }
 
 contextBridge.exposeInMainWorld("api", {
+  session: {
+    setToken: (token) => {
+      sessionToken = token || null;
+    },
+  },
   auth: {
     login: (credentials) => ipcRenderer.invoke("auth:login", credentials),
-    validate: (token) => ipcRenderer.invoke("auth:validate", token),
-    logout: (token) => ipcRenderer.invoke("auth:logout", token),
+    validate: (token) => {
+      sessionToken = token || null;
+      return ipcRenderer.invoke("auth:validate", { _token: token });
+    },
+    logout: (token) => {
+      sessionToken = token || null;
+      return ipcRenderer.invoke("auth:logout", { _token: token });
+    },
   },
   company: {
-    list: () => ipcRenderer.invoke("company:list"),
-    create: (data) => ipcRenderer.invoke("company:create", data),
-    select: (data) => ipcRenderer.invoke("company:select", data),
+    list: () => invoke("company:list"),
+    create: (data) => invoke("company:create", data),
+    select: (data) => invoke("company:select", data),
   },
   masters: {
-    lookups: () => ipcRenderer.invoke("masters:lookups"),
+    lookups: () => invoke("masters:lookups"),
     units: masterApi("units"),
     warehouses: masterApi("warehouses"),
     accounts: masterApi("accounts"),
@@ -31,91 +57,101 @@ contextBridge.exposeInMainWorld("api", {
     vendors: masterApi("vendors"),
   },
   purchase: {
-    lookups: () => ipcRenderer.invoke("purchase:lookups"),
-    listInvoices: () => ipcRenderer.invoke("purchase:invoices:list"),
-    getInvoice: (id) => ipcRenderer.invoke("purchase:invoices:get", id),
-    saveInvoice: (data) => ipcRenderer.invoke("purchase:invoices:save", data),
-    previewTotals: (data) => ipcRenderer.invoke("purchase:invoices:preview", data),
-    listReturns: () => ipcRenderer.invoke("purchase:returns:list"),
-    saveReturn: (data) => ipcRenderer.invoke("purchase:returns:save", data),
+    lookups: () => invoke("purchase:lookups"),
+    listInvoices: () => invoke("purchase:invoices:list"),
+    getInvoice: (id) => invoke("purchase:invoices:get", { id }),
+    saveInvoice: (data) => invoke("purchase:invoices:save", data),
+    previewTotals: (data) => invoke("purchase:invoices:preview", data),
+    listReturns: () => invoke("purchase:returns:list"),
+    saveReturn: (data) => invoke("purchase:returns:save", data),
   },
   sales: {
-    lookups: () => ipcRenderer.invoke("sales:lookups"),
-    listQuotations: () => ipcRenderer.invoke("sales:quotations:list"),
-    saveQuotation: (data) => ipcRenderer.invoke("sales:quotations:save", data),
-    convertQuotation: (id) => ipcRenderer.invoke("sales:quotations:convert", id),
-    listInvoices: () => ipcRenderer.invoke("sales:invoices:list"),
-    saveInvoice: (data) => ipcRenderer.invoke("sales:invoices:save", data),
-    listPendingDeliveries: () => ipcRenderer.invoke("sales:invoices:pending"),
-    listRecoveries: () => ipcRenderer.invoke("sales:recoveries:list"),
-    saveRecovery: (data) => ipcRenderer.invoke("sales:recoveries:save", data),
+    lookups: () => invoke("sales:lookups"),
+    listQuotations: () => invoke("sales:quotations:list"),
+    saveQuotation: (data) => invoke("sales:quotations:save", data),
+    convertQuotation: (id) => invoke("sales:quotations:convert", { id }),
+    listInvoices: () => invoke("sales:invoices:list"),
+    saveInvoice: (data) => invoke("sales:invoices:save", data),
+    listPendingDeliveries: () => invoke("sales:invoices:pending"),
+    listRecoveries: () => invoke("sales:recoveries:list"),
+    saveRecovery: (data) => invoke("sales:recoveries:save", data),
     getOutstandingInvoices: (customerId) =>
-      ipcRenderer.invoke("sales:recoveries:outstanding", customerId),
-    listLoadSlips: () => ipcRenderer.invoke("sales:loadslips:list"),
-    saveLoadSlip: (data) => ipcRenderer.invoke("sales:loadslips:save", data),
-    deliverLoadSlip: (id) => ipcRenderer.invoke("sales:loadslips:deliver", id),
-    listDeliveryMen: () => ipcRenderer.invoke("sales:deliverymen:list"),
-    saveDeliveryMan: (data) => ipcRenderer.invoke("sales:deliverymen:save", data),
-    listReturns: () => ipcRenderer.invoke("sales:returns:list"),
-    saveReturn: (data) => ipcRenderer.invoke("sales:returns:save", data),
-    getReturnInvoice: (id) => ipcRenderer.invoke("sales:returns:invoice", id),
+      invoke("sales:recoveries:outstanding", { customerId }),
+    listLoadSlips: () => invoke("sales:loadslips:list"),
+    saveLoadSlip: (data) => invoke("sales:loadslips:save", data),
+    deliverLoadSlip: (id) => invoke("sales:loadslips:deliver", { id }),
+    listDeliveryMen: () => invoke("sales:deliverymen:list"),
+    saveDeliveryMan: (data) => invoke("sales:deliverymen:save", data),
+    listReturns: () => invoke("sales:returns:list"),
+    saveReturn: (data) => invoke("sales:returns:save", data),
+    getReturnInvoice: (id) => invoke("sales:returns:invoice", { id }),
   },
   claims: {
-    lookups: () => ipcRenderer.invoke("claims:lookups"),
-    list: (filters) => ipcRenderer.invoke("claims:list", filters),
-    save: (data) => ipcRenderer.invoke("claims:save", data),
-    updateStatus: (data) => ipcRenderer.invoke("claims:status", data),
-    settle: (data) => ipcRenderer.invoke("claims:settle", data),
-    report: (filters) => ipcRenderer.invoke("claims:report", filters),
+    lookups: () => invoke("claims:lookups"),
+    list: (filters) => invoke("claims:list", filters || {}),
+    save: (data) => invoke("claims:save", data),
+    updateStatus: (data) => invoke("claims:status", data),
+    settle: (data) => invoke("claims:settle", data),
+    report: (filters) => invoke("claims:report", filters || {}),
   },
   stock: {
-    list: () => ipcRenderer.invoke("stock:list"),
+    list: () => invoke("stock:list"),
   },
   inventory: {
-    lookups: () => ipcRenderer.invoke("inventory:lookups"),
-    getStockTakeSheet: (warehouseId) => ipcRenderer.invoke("inventory:stocktake:sheet", warehouseId),
-    finalizeStockTake: (data) => ipcRenderer.invoke("inventory:stocktake:finalize", data),
-    saveOpeningStock: (data) => ipcRenderer.invoke("inventory:opening:save", data),
-    saveAdjustment: (data) => ipcRenderer.invoke("inventory:adjustments:save", data),
-    listAdjustments: () => ipcRenderer.invoke("inventory:adjustments:list"),
-    saveTransfer: (data) => ipcRenderer.invoke("inventory:transfers:save", data),
-    listTransfers: () => ipcRenderer.invoke("inventory:transfers:list"),
-    lowStockReport: () => ipcRenderer.invoke("inventory:reports:lowstock"),
-    expiryReport: () => ipcRenderer.invoke("inventory:reports:expiry"),
+    lookups: () => invoke("inventory:lookups"),
+    getStockTakeSheet: (warehouseId) => invoke("inventory:stocktake:sheet", { warehouseId }),
+    finalizeStockTake: (data) => invoke("inventory:stocktake:finalize", data),
+    saveOpeningStock: (data) => invoke("inventory:opening:save", data),
+    saveAdjustment: (data) => invoke("inventory:adjustments:save", data),
+    listAdjustments: () => invoke("inventory:adjustments:list"),
+    saveTransfer: (data) => invoke("inventory:transfers:save", data),
+    listTransfers: () => invoke("inventory:transfers:list"),
+    lowStockReport: () => invoke("inventory:reports:lowstock"),
+    expiryReport: () => invoke("inventory:reports:expiry"),
   },
   accounting: {
-    lookups: () => ipcRenderer.invoke("accounting:lookups"),
-    listVouchers: (filters) => ipcRenderer.invoke("accounting:vouchers:list", filters),
-    saveVoucher: (data) => ipcRenderer.invoke("accounting:vouchers:save", data),
-    buildQuickLines: (data) => ipcRenderer.invoke("accounting:vouchers:quicklines", data),
-    listJournal: (filters) => ipcRenderer.invoke("accounting:journal:list", filters),
-    trialBalance: (filters) => ipcRenderer.invoke("accounting:trialbalance", filters),
-    cashbook: (filters) => ipcRenderer.invoke("accounting:cashbook", filters),
-    accountLedger: (filters) => ipcRenderer.invoke("accounting:ledger", filters),
-    dailyCash: (filters) => ipcRenderer.invoke("accounting:dailycash", filters),
-    profitLoss: (filters) => ipcRenderer.invoke("accounting:profitloss", filters),
+    lookups: () => invoke("accounting:lookups"),
+    listVouchers: (filters) => invoke("accounting:vouchers:list", filters || {}),
+    saveVoucher: (data) => invoke("accounting:vouchers:save", data),
+    buildQuickLines: (data) => invoke("accounting:vouchers:quicklines", data),
+    listJournal: (filters) => invoke("accounting:journal:list", filters || {}),
+    trialBalance: (filters) => invoke("accounting:trialbalance", filters || {}),
+    cashbook: (filters) => invoke("accounting:cashbook", filters || {}),
+    bankbook: (filters) => invoke("accounting:bankbook", filters || {}),
+    accountLedger: (filters) => invoke("accounting:ledger", filters || {}),
+    dailyCash: (filters) => invoke("accounting:dailycash", filters || {}),
+    profitLoss: (filters) => invoke("accounting:profitloss", filters || {}),
   },
   reports: {
-    aging: (filters) => ipcRenderer.invoke("reports:aging", filters),
-    balanceSheet: (filters) => ipcRenderer.invoke("reports:balancesheet", filters),
-    incomeStatement: (filters) => ipcRenderer.invoke("reports:incomestatement", filters),
-    customerOutstanding: () => ipcRenderer.invoke("reports:customeroutstanding"),
-    customerSales: (filters) => ipcRenderer.invoke("reports:customersales", filters),
-    recovery: (filters) => ipcRenderer.invoke("reports:recovery", filters),
-    salesmen: (filters) => ipcRenderer.invoke("reports:salesmen", filters),
-    productSales: (filters) => ipcRenderer.invoke("reports:productsales", filters),
-    purchases: (filters) => ipcRenderer.invoke("reports:purchases", filters),
-    stockValuation: () => ipcRenderer.invoke("reports:stockvaluation"),
-    commission: (filters) => ipcRenderer.invoke("reports:commission", filters),
+    aging: (filters) => invoke("reports:aging", filters || {}),
+    balanceSheet: (filters) => invoke("reports:balancesheet", filters || {}),
+    incomeStatement: (filters) => invoke("reports:incomestatement", filters || {}),
+    customerOutstanding: () => invoke("reports:customeroutstanding"),
+    customerSales: (filters) => invoke("reports:customersales", filters || {}),
+    recovery: (filters) => invoke("reports:recovery", filters || {}),
+    salesmen: (filters) => invoke("reports:salesmen", filters || {}),
+    productSales: (filters) => invoke("reports:productsales", filters || {}),
+    purchases: (filters) => invoke("reports:purchases", filters || {}),
+    stockValuation: () => invoke("reports:stockvaluation"),
+    commission: (filters) => invoke("reports:commission", filters || {}),
   },
   tools: {
-    backup: () => ipcRenderer.invoke("tools:backup"),
-    backupLocal: () => ipcRenderer.invoke("tools:backup:local"),
-    listLocalBackups: () => ipcRenderer.invoke("tools:backup:list"),
-    restore: () => ipcRenderer.invoke("tools:restore"),
-    exportEntities: () => ipcRenderer.invoke("tools:export:entities"),
-    exportCsv: (entity) => ipcRenderer.invoke("tools:export:csv", entity),
-    importCsv: (entity) => ipcRenderer.invoke("tools:import:csv", entity),
-    printHtml: (html) => ipcRenderer.invoke("tools:printHtml", html),
+    backup: () => invoke("tools:backup"),
+    backupLocal: () => invoke("tools:backup:local"),
+    listLocalBackups: () => invoke("tools:backup:list"),
+    restore: () => invoke("tools:restore"),
+    exportEntities: () => invoke("tools:export:entities"),
+    exportCsv: (entity) => invoke("tools:export:csv", { entity }),
+    importCsv: (entity) => invoke("tools:import:csv", { entity }),
+    printHtml: (html) => invoke("tools:printHtml", { html }),
+    integrity: () => invoke("tools:integrity"),
+  },
+  settings: {
+    get: () => invoke("settings:get"),
+    save: (data) => invoke("settings:save", data),
+    listSequences: () => invoke("settings:sequences:list"),
+    saveSequence: (data) => invoke("settings:sequences:save", data),
+    listMappings: () => invoke("settings:mappings:list"),
+    saveMapping: (data) => invoke("settings:mappings:save", data),
   },
 });

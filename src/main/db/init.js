@@ -11,6 +11,10 @@ let masterPrisma = null;
 let companyPrisma = null;
 let activeCompanyDb = null;
 
+const MASTER_SCHEMA = "prisma/master/schema.prisma";
+const COMPANY_SCHEMA = "prisma/company/schema.prisma";
+const LEGACY_BASELINE = "20250706210000_baseline";
+
 export function getDataDir() {
   const dataDir = join(app.getPath("userData"), "data");
   if (!existsSync(dataDir)) {
@@ -61,28 +65,68 @@ function getProjectRoot() {
   return join(app.getAppPath());
 }
 
-function runDbPush(schemaFile, databaseUrl) {
+function runPrismaCommand(args, databaseUrl) {
   const projectRoot = getProjectRoot();
   const prismaCli = join(projectRoot, "node_modules", "prisma", "build", "index.js");
-  const result = spawnSync(
-    process.execPath,
-    [prismaCli, "db", "push", "--skip-generate", "--schema", join(projectRoot, schemaFile)],
-    {
-      cwd: projectRoot,
-      env: {
-        ...process.env,
-        ELECTRON_RUN_AS_NODE: "1",
-        MASTER_DATABASE_URL: databaseUrl,
-        COMPANY_DATABASE_URL: databaseUrl,
-      },
-      stdio: "pipe",
-      encoding: "utf-8",
-    }
-  );
+  const result = spawnSync(process.execPath, [prismaCli, ...args], {
+    cwd: projectRoot,
+    env: {
+      ...process.env,
+      ELECTRON_RUN_AS_NODE: "1",
+      MASTER_DATABASE_URL: databaseUrl,
+      COMPANY_DATABASE_URL: databaseUrl,
+    },
+    stdio: "pipe",
+    encoding: "utf-8",
+  });
 
   if (result.status !== 0) {
-    const message = [result.stderr, result.stdout].filter(Boolean).join("\n") || "Database push failed";
+    const message = [result.stderr, result.stdout].filter(Boolean).join("\n") || "Prisma command failed";
     throw new Error(message);
+  }
+
+  return result.stdout;
+}
+
+function runMigrateDeploy(schemaFile, databaseUrl) {
+  return runPrismaCommand(["migrate", "deploy", "--schema", schemaFile], databaseUrl);
+}
+
+function runMigrateResolve(schemaFile, databaseUrl, migrationName) {
+  return runPrismaCommand(
+    ["migrate", "resolve", "--applied", migrationName, "--schema", schemaFile],
+    databaseUrl
+  );
+}
+
+async function databaseHasTable(dbUrl, tableName) {
+  const client = new MasterPrismaClient({ datasources: { db: { url: dbUrl } } });
+  try {
+    const rows = await client.$queryRawUnsafe(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name=?`,
+      tableName
+    );
+    return Array.isArray(rows) && rows.length > 0;
+  } finally {
+    await client.$disconnect();
+  }
+}
+
+async function databaseHasMigrationsTable(dbUrl) {
+  return databaseHasTable(dbUrl, "_prisma_migrations");
+}
+
+async function bootstrapLegacyMigrations(schemaFile, dbUrl, sentinelTable) {
+  const dbPath = dbUrl.replace(/^file:/, "");
+  if (!existsSync(dbPath)) {
+    return;
+  }
+
+  const hasBusinessTables = await databaseHasTable(dbUrl, sentinelTable);
+  const hasMigrations = await databaseHasMigrationsTable(dbUrl);
+
+  if (hasBusinessTables && !hasMigrations) {
+    runMigrateResolve(schemaFile, dbUrl, LEGACY_BASELINE);
   }
 }
 
@@ -97,7 +141,9 @@ export async function initDatabase() {
   const dbUrl = `file:${dbPath.replace(/\\/g, "/")}`;
 
   process.env.MASTER_DATABASE_URL = dbUrl;
-  runDbPush("prisma/master.prisma", dbUrl);
+
+  await bootstrapLegacyMigrations(MASTER_SCHEMA, dbUrl, "User");
+  runMigrateDeploy(MASTER_SCHEMA, dbUrl);
 
   masterPrisma = new MasterPrismaClient({
     datasources: { db: { url: dbUrl } },
@@ -118,7 +164,9 @@ export async function connectCompanyDatabase(dbFile) {
   const dbUrl = `file:${dbPath.replace(/\\/g, "/")}`;
 
   process.env.COMPANY_DATABASE_URL = dbUrl;
-  runDbPush("prisma/company.prisma", dbUrl);
+
+  await bootstrapLegacyMigrations(COMPANY_SCHEMA, dbUrl, "Product");
+  runMigrateDeploy(COMPANY_SCHEMA, dbUrl);
 
   companyPrisma = new CompanyPrismaClient({
     datasources: { db: { url: dbUrl } },

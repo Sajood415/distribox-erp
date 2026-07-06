@@ -1,4 +1,5 @@
 import { ipcMain, BrowserWindow } from "electron";
+import { registerHandler } from "./middleware/register-handler";
 import { loginUser, validateSession, logoutUser } from "../services/auth";
 import { listCompanies, createCompany, selectCompany } from "../services/company";
 import {
@@ -87,6 +88,7 @@ import {
   listJournalEntries,
   getTrialBalance,
   getCashbook,
+  getBankbook,
   getAccountLedger,
   getDailyCashPosition,
   getProfitAndLoss,
@@ -116,169 +118,179 @@ import {
   importEntityCsv,
 } from "../services/import-export";
 import { printHtml } from "../services/print";
-
-function wrap(handler) {
-  return async (_, payload) => {
-    try {
-      return await handler(payload);
-    } catch (error) {
-      return { success: false, error: error.message || "Unexpected error" };
-    }
-  };
-}
+import { runIntegrityChecks } from "../services/integrity-service";
+import {
+  getAccountMappings,
+  saveAccountMapping,
+} from "../services/account-mapping-service";
+import { extractToken } from "./middleware/ipc-auth";
+import {
+  getSettings,
+  saveSettings,
+  listDocumentSequences,
+  saveDocumentSequence,
+} from "../services/settings-service";
 
 export function registerIpcHandlers() {
-  ipcMain.handle("auth:login", wrap(loginUser));
-  ipcMain.handle("auth:validate", wrap((token) => validateSession(token)));
-  ipcMain.handle("auth:logout", wrap((token) => logoutUser(token)));
+  registerHandler(ipcMain, "auth:login", loginUser);
+  registerHandler(ipcMain, "auth:validate", (payload) => validateSession(extractToken(payload)));
+  registerHandler(ipcMain, "auth:logout", (payload, ctx) => logoutUser(extractToken(payload), ctx));
 
-  ipcMain.handle("company:list", wrap(listCompanies));
-  ipcMain.handle("company:create", wrap(createCompany));
-  ipcMain.handle("company:select", wrap(selectCompany));
+  registerHandler(ipcMain, "company:list", listCompanies);
+  registerHandler(ipcMain, "company:create", createCompany);
+  registerHandler(ipcMain, "company:select", selectCompany);
 
-  ipcMain.handle("masters:lookups", wrap(getMasterLookups));
+  registerHandler(ipcMain, "masters:lookups", getMasterLookups);
+  registerHandler(ipcMain, "masters:units:list", listUnits);
+  registerHandler(ipcMain, "masters:units:save", saveUnit);
+  registerHandler(ipcMain, "masters:units:delete", deleteUnit);
+  registerHandler(ipcMain, "masters:warehouses:list", listWarehouses);
+  registerHandler(ipcMain, "masters:warehouses:save", saveWarehouse);
+  registerHandler(ipcMain, "masters:warehouses:delete", deleteWarehouse);
+  registerHandler(ipcMain, "masters:accounts:list", listAccounts);
+  registerHandler(ipcMain, "masters:accounts:save", saveAccount);
+  registerHandler(ipcMain, "masters:accounts:delete", deleteAccount);
+  registerHandler(ipcMain, "masters:routes:list", listRoutes);
+  registerHandler(ipcMain, "masters:routes:save", saveRoute);
+  registerHandler(ipcMain, "masters:routes:delete", deleteRoute);
+  registerHandler(ipcMain, "masters:salesmen:list", listSalesmen);
+  registerHandler(ipcMain, "masters:salesmen:save", saveSalesman);
+  registerHandler(ipcMain, "masters:salesmen:delete", deleteSalesman);
+  registerHandler(ipcMain, "masters:products:list", listProducts);
+  registerHandler(ipcMain, "masters:products:save", saveProduct);
+  registerHandler(ipcMain, "masters:products:delete", deleteProduct);
+  registerHandler(ipcMain, "masters:customers:list", listCustomers);
+  registerHandler(ipcMain, "masters:customers:save", saveCustomer);
+  registerHandler(ipcMain, "masters:customers:delete", deleteCustomer);
+  registerHandler(ipcMain, "masters:vendors:list", listVendors);
+  registerHandler(ipcMain, "masters:vendors:save", saveVendor);
+  registerHandler(ipcMain, "masters:vendors:delete", deleteVendor);
 
-  ipcMain.handle("masters:units:list", wrap(listUnits));
-  ipcMain.handle("masters:units:save", wrap(saveUnit));
-  ipcMain.handle("masters:units:delete", wrap(deleteUnit));
+  registerHandler(ipcMain, "purchase:lookups", getPurchaseLookups);
+  registerHandler(ipcMain, "purchase:invoices:list", listPurchaseInvoices);
+  registerHandler(ipcMain, "purchase:invoices:get", getPurchaseInvoice);
+  registerHandler(ipcMain, "purchase:invoices:save", savePurchaseInvoice);
+  registerHandler(ipcMain, "purchase:invoices:preview", previewPurchaseTotals);
+  registerHandler(ipcMain, "purchase:returns:list", listPurchaseReturns);
+  registerHandler(ipcMain, "purchase:returns:save", savePurchaseReturn);
 
-  ipcMain.handle("masters:warehouses:list", wrap(listWarehouses));
-  ipcMain.handle("masters:warehouses:save", wrap(saveWarehouse));
-  ipcMain.handle("masters:warehouses:delete", wrap(deleteWarehouse));
+  registerHandler(ipcMain, "stock:list", listStock);
 
-  ipcMain.handle("masters:accounts:list", wrap(listAccounts));
-  ipcMain.handle("masters:accounts:save", wrap(saveAccount));
-  ipcMain.handle("masters:accounts:delete", wrap(deleteAccount));
+  registerHandler(ipcMain, "inventory:lookups", getInventoryLookups);
+  registerHandler(ipcMain, "inventory:stocktake:sheet", getStockTakeSheet);
+  registerHandler(ipcMain, "inventory:stocktake:finalize", finalizeStockTake);
+  registerHandler(ipcMain, "inventory:opening:save", saveOpeningStock);
+  registerHandler(ipcMain, "inventory:adjustments:save", saveStockAdjustment);
+  registerHandler(ipcMain, "inventory:adjustments:list", listStockAdjustments);
+  registerHandler(ipcMain, "inventory:transfers:save", saveStockTransfer);
+  registerHandler(ipcMain, "inventory:transfers:list", listStockTransfers);
+  registerHandler(ipcMain, "inventory:reports:lowstock", getLowStockReport);
+  registerHandler(ipcMain, "inventory:reports:expiry", getExpiryReport);
 
-  ipcMain.handle("masters:routes:list", wrap(listRoutes));
-  ipcMain.handle("masters:routes:save", wrap(saveRoute));
-  ipcMain.handle("masters:routes:delete", wrap(deleteRoute));
+  registerHandler(ipcMain, "sales:lookups", getSalesLookups);
+  registerHandler(ipcMain, "sales:quotations:list", listQuotations);
+  registerHandler(ipcMain, "sales:quotations:save", saveQuotation);
+  registerHandler(ipcMain, "sales:quotations:convert", convertQuotationToInvoice);
+  registerHandler(ipcMain, "sales:invoices:list", listSalesInvoices);
+  registerHandler(ipcMain, "sales:invoices:save", saveSalesInvoice);
+  registerHandler(ipcMain, "sales:invoices:pending", listPendingDeliveries);
+  registerHandler(ipcMain, "sales:recoveries:list", listRecoveries);
+  registerHandler(ipcMain, "sales:recoveries:save", saveRecovery);
+  registerHandler(ipcMain, "sales:recoveries:outstanding", getCustomerOutstandingInvoices);
+  registerHandler(ipcMain, "sales:loadslips:list", listLoadSlips);
+  registerHandler(ipcMain, "sales:loadslips:save", saveLoadSlip);
+  registerHandler(ipcMain, "sales:loadslips:deliver", markLoadSlipDelivered);
+  registerHandler(ipcMain, "sales:deliverymen:list", listDeliveryMen);
+  registerHandler(ipcMain, "sales:deliverymen:save", saveDeliveryMan);
+  registerHandler(ipcMain, "sales:returns:list", listSalesReturns);
+  registerHandler(ipcMain, "sales:returns:save", saveSalesReturn);
+  registerHandler(ipcMain, "sales:returns:invoice", getSalesInvoiceForReturn);
 
-  ipcMain.handle("masters:salesmen:list", wrap(listSalesmen));
-  ipcMain.handle("masters:salesmen:save", wrap(saveSalesman));
-  ipcMain.handle("masters:salesmen:delete", wrap(deleteSalesman));
+  registerHandler(ipcMain, "claims:lookups", getClaimLookups);
+  registerHandler(ipcMain, "claims:list", listClaims);
+  registerHandler(ipcMain, "claims:save", saveClaim);
+  registerHandler(ipcMain, "claims:status", updateClaimStatus);
+  registerHandler(ipcMain, "claims:settle", settleClaim);
+  registerHandler(ipcMain, "claims:report", getClaimReport);
 
-  ipcMain.handle("masters:products:list", wrap(listProducts));
-  ipcMain.handle("masters:products:save", wrap(saveProduct));
-  ipcMain.handle("masters:products:delete", wrap(deleteProduct));
+  registerHandler(ipcMain, "accounting:lookups", getAccountingLookups);
+  registerHandler(ipcMain, "accounting:vouchers:list", listVouchers);
+  registerHandler(ipcMain, "accounting:vouchers:save", saveVoucher);
+  registerHandler(ipcMain, "accounting:vouchers:quicklines", buildQuickVoucherLines);
+  registerHandler(ipcMain, "accounting:journal:list", listJournalEntries);
+  registerHandler(ipcMain, "accounting:trialbalance", getTrialBalance);
+  registerHandler(ipcMain, "accounting:cashbook", getCashbook);
+  registerHandler(ipcMain, "accounting:bankbook", getBankbook);
+  registerHandler(ipcMain, "accounting:ledger", getAccountLedger);
+  registerHandler(ipcMain, "accounting:dailycash", getDailyCashPosition);
+  registerHandler(ipcMain, "accounting:profitloss", getProfitAndLoss);
 
-  ipcMain.handle("masters:customers:list", wrap(listCustomers));
-  ipcMain.handle("masters:customers:save", wrap(saveCustomer));
-  ipcMain.handle("masters:customers:delete", wrap(deleteCustomer));
+  registerHandler(ipcMain, "reports:aging", getAgingReport);
+  registerHandler(ipcMain, "reports:balancesheet", getBalanceSheet);
+  registerHandler(ipcMain, "reports:incomestatement", getIncomeStatement);
+  registerHandler(ipcMain, "reports:customeroutstanding", getCustomerOutstandingReport);
+  registerHandler(ipcMain, "reports:customersales", getCustomerSalesReport);
+  registerHandler(ipcMain, "reports:recovery", getRecoveryReport);
+  registerHandler(ipcMain, "reports:salesmen", getSalesmanReport);
+  registerHandler(ipcMain, "reports:productsales", getProductSalesReport);
+  registerHandler(ipcMain, "reports:purchases", getPurchaseReport);
+  registerHandler(ipcMain, "reports:stockvaluation", getStockValuationReport);
+  registerHandler(ipcMain, "reports:commission", getCommissionReport);
 
-  ipcMain.handle("masters:vendors:list", wrap(listVendors));
-  ipcMain.handle("masters:vendors:save", wrap(saveVendor));
-  ipcMain.handle("masters:vendors:delete", wrap(deleteVendor));
-
-  ipcMain.handle("purchase:lookups", wrap(getPurchaseLookups));
-  ipcMain.handle("purchase:invoices:list", wrap(listPurchaseInvoices));
-  ipcMain.handle("purchase:invoices:get", wrap(getPurchaseInvoice));
-  ipcMain.handle("purchase:invoices:save", wrap(savePurchaseInvoice));
-  ipcMain.handle("purchase:invoices:preview", wrap(previewPurchaseTotals));
-  ipcMain.handle("purchase:returns:list", wrap(listPurchaseReturns));
-  ipcMain.handle("purchase:returns:save", wrap(savePurchaseReturn));
-  ipcMain.handle("stock:list", wrap(listStock));
-  ipcMain.handle("inventory:lookups", wrap(getInventoryLookups));
-  ipcMain.handle("inventory:stocktake:sheet", wrap(getStockTakeSheet));
-  ipcMain.handle("inventory:stocktake:finalize", wrap(finalizeStockTake));
-  ipcMain.handle("inventory:opening:save", wrap(saveOpeningStock));
-  ipcMain.handle("inventory:adjustments:save", wrap(saveStockAdjustment));
-  ipcMain.handle("inventory:adjustments:list", wrap(listStockAdjustments));
-  ipcMain.handle("inventory:transfers:save", wrap(saveStockTransfer));
-  ipcMain.handle("inventory:transfers:list", wrap(listStockTransfers));
-  ipcMain.handle("inventory:reports:lowstock", wrap(getLowStockReport));
-  ipcMain.handle("inventory:reports:expiry", wrap(getExpiryReport));
-
-  ipcMain.handle("sales:lookups", wrap(getSalesLookups));
-  ipcMain.handle("sales:quotations:list", wrap(listQuotations));
-  ipcMain.handle("sales:quotations:save", wrap(saveQuotation));
-  ipcMain.handle("sales:quotations:convert", wrap(convertQuotationToInvoice));
-  ipcMain.handle("sales:invoices:list", wrap(listSalesInvoices));
-  ipcMain.handle("sales:invoices:save", wrap(saveSalesInvoice));
-  ipcMain.handle("sales:invoices:pending", wrap(listPendingDeliveries));
-  ipcMain.handle("sales:recoveries:list", wrap(listRecoveries));
-  ipcMain.handle("sales:recoveries:save", wrap(saveRecovery));
-  ipcMain.handle("sales:recoveries:outstanding", wrap(getCustomerOutstandingInvoices));
-  ipcMain.handle("sales:loadslips:list", wrap(listLoadSlips));
-  ipcMain.handle("sales:loadslips:save", wrap(saveLoadSlip));
-  ipcMain.handle("sales:loadslips:deliver", wrap(markLoadSlipDelivered));
-  ipcMain.handle("sales:deliverymen:list", wrap(listDeliveryMen));
-  ipcMain.handle("sales:deliverymen:save", wrap(saveDeliveryMan));
-
-  ipcMain.handle("claims:lookups", wrap(getClaimLookups));
-  ipcMain.handle("claims:list", wrap(listClaims));
-  ipcMain.handle("claims:save", wrap(saveClaim));
-  ipcMain.handle("claims:status", wrap(updateClaimStatus));
-  ipcMain.handle("claims:settle", wrap(settleClaim));
-  ipcMain.handle("claims:report", wrap(getClaimReport));
-  ipcMain.handle("sales:returns:list", wrap(listSalesReturns));
-  ipcMain.handle("sales:returns:save", wrap(saveSalesReturn));
-  ipcMain.handle("sales:returns:invoice", wrap(getSalesInvoiceForReturn));
-
-  ipcMain.handle("accounting:lookups", wrap(getAccountingLookups));
-  ipcMain.handle("accounting:vouchers:list", wrap(listVouchers));
-  ipcMain.handle("accounting:vouchers:save", wrap(saveVoucher));
-  ipcMain.handle("accounting:vouchers:quicklines", wrap(buildQuickVoucherLines));
-  ipcMain.handle("accounting:journal:list", wrap(listJournalEntries));
-  ipcMain.handle("accounting:trialbalance", wrap(getTrialBalance));
-  ipcMain.handle("accounting:cashbook", wrap(getCashbook));
-  ipcMain.handle("accounting:ledger", wrap(getAccountLedger));
-  ipcMain.handle("accounting:dailycash", wrap(getDailyCashPosition));
-  ipcMain.handle("accounting:profitloss", wrap(getProfitAndLoss));
-
-  ipcMain.handle("reports:aging", wrap(getAgingReport));
-  ipcMain.handle("reports:balancesheet", wrap(getBalanceSheet));
-  ipcMain.handle("reports:incomestatement", wrap(getIncomeStatement));
-  ipcMain.handle("reports:customeroutstanding", wrap(getCustomerOutstandingReport));
-  ipcMain.handle("reports:customersales", wrap(getCustomerSalesReport));
-  ipcMain.handle("reports:recovery", wrap(getRecoveryReport));
-  ipcMain.handle("reports:salesmen", wrap(getSalesmanReport));
-  ipcMain.handle("reports:productsales", wrap(getProductSalesReport));
-  ipcMain.handle("reports:purchases", wrap(getPurchaseReport));
-  ipcMain.handle("reports:stockvaluation", wrap(getStockValuationReport));
-  ipcMain.handle("reports:commission", wrap(getCommissionReport));
-
-  ipcMain.handle("tools:backup", async (event) => {
-    try {
+  registerHandler(
+    ipcMain,
+    "tools:backup",
+    async (_, __, event) => {
       const win = BrowserWindow.fromWebContents(event.sender);
-      return await createBackup(win);
-    } catch (error) {
-      return { success: false, error: error.message || "Backup failed" };
-    }
-  });
-  ipcMain.handle("tools:backup:local", wrap(createLocalBackup));
-  ipcMain.handle("tools:backup:list", wrap(listLocalBackups));
-  ipcMain.handle("tools:restore", async (event) => {
-    try {
+      return createBackup(win);
+    },
+    { needsWindow: true }
+  );
+  registerHandler(ipcMain, "tools:backup:local", createLocalBackup);
+  registerHandler(ipcMain, "tools:backup:list", listLocalBackups);
+  registerHandler(
+    ipcMain,
+    "tools:restore",
+    async (_, __, event) => {
       const win = BrowserWindow.fromWebContents(event.sender);
-      return await restoreBackup(win);
-    } catch (error) {
-      return { success: false, error: error.message || "Restore failed" };
-    }
-  });
-  ipcMain.handle("tools:export:entities", wrap(getExportEntities));
-  ipcMain.handle("tools:export:csv", async (event, entity) => {
-    try {
+      return restoreBackup(win);
+    },
+    { needsWindow: true }
+  );
+  registerHandler(ipcMain, "tools:export:entities", getExportEntities);
+  registerHandler(
+    ipcMain,
+    "tools:export:csv",
+    async (entity, __, event) => {
       const win = BrowserWindow.fromWebContents(event.sender);
-      return await exportEntityCsv(win, entity);
-    } catch (error) {
-      return { success: false, error: error.message || "Export failed" };
-    }
-  });
-  ipcMain.handle("tools:import:csv", async (event, entity) => {
-    try {
+      return exportEntityCsv(win, entity);
+    },
+    { needsWindow: true }
+  );
+  registerHandler(
+    ipcMain,
+    "tools:import:csv",
+    async (entity, __, event) => {
       const win = BrowserWindow.fromWebContents(event.sender);
-      return await importEntityCsv(win, entity);
-    } catch (error) {
-      return { success: false, error: error.message || "Import failed" };
-    }
-  });
-  ipcMain.handle("tools:printHtml", async (event, html) => {
-    try {
+      return importEntityCsv(win, entity);
+    },
+    { needsWindow: true }
+  );
+  registerHandler(
+    ipcMain,
+    "tools:printHtml",
+    async (html, __, event) => {
       const win = BrowserWindow.fromWebContents(event.sender);
-      return await printHtml(win, html);
-    } catch (error) {
-      return { success: false, error: error.message || "Print failed" };
-    }
-  });
+      return printHtml(win, html);
+    },
+    { needsWindow: true }
+  );
+
+  registerHandler(ipcMain, "settings:get", getSettings);
+  registerHandler(ipcMain, "settings:save", saveSettings);
+  registerHandler(ipcMain, "settings:sequences:list", listDocumentSequences);
+  registerHandler(ipcMain, "settings:sequences:save", saveDocumentSequence);
+  registerHandler(ipcMain, "settings:mappings:list", getAccountMappings);
+  registerHandler(ipcMain, "settings:mappings:save", saveAccountMapping);
+  registerHandler(ipcMain, "tools:integrity", runIntegrityChecks);
 }

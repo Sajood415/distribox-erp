@@ -76,15 +76,21 @@ const navGroups = [
       { to: "/accounting/vouchers", label: "Vouchers" },
       { to: "/accounting/vouchers/new", label: "New Voucher" },
       { to: "/accounting/cashbook", label: "Cashbook" },
+      { to: "/accounting/bankbook", label: "Bank Book" },
       { to: "/accounting/journal", label: "General Journal" },
       { to: "/accounting/trial-balance", label: "Trial Balance" },
     ],
+  },
+  {
+    title: "Settings",
+    links: [{ to: "/settings", label: "Company Settings" }],
   },
   {
     title: "Tools",
     links: [
       { to: "/tools", label: "All Tools" },
       { to: "/tools/backup", label: "Backup & Restore" },
+      { to: "/tools/database-health", label: "Database Health" },
       { to: "/tools/import-export", label: "Import / Export" },
     ],
   },
