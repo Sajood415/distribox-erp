@@ -5,8 +5,11 @@ import { listAccounts } from "../repositories/account-repository";
 import { listMappings } from "../repositories/account-mapping-repository";
 import {
   findOrphanJournalLines,
+  findJournalLinesCumulative,
 } from "../repositories/journal-repository";
 import { ACCOUNT_ROLES } from "../core/account-roles";
+import { getCustomerOutstanding } from "../domain/customer-outstanding";
+import { resolveAccountIdByRole } from "./account-mapping-service";
 
 function success(data) {
   return { success: true, data };
@@ -75,6 +78,37 @@ export async function runIntegrityChecks() {
 
   const negativeStock = await prisma.stock.findMany({ where: { quantity: { lt: 0 } } });
 
+  let arMismatch = false;
+  try {
+    const arAccountId = await resolveAccountIdByRole(prisma, ACCOUNT_ROLES.ACCOUNTS_RECEIVABLE);
+    const arLines = await findJournalLinesCumulative(prisma, {
+      end: new Date(),
+      accountId: arAccountId,
+    });
+    const arBalance = roundMoney(arLines.reduce((sum, line) => sum + line.debit - line.credit, 0));
+
+    const customers = await prisma.customer.findMany({ select: { id: true } });
+    let operationalTotal = 0;
+    for (const customer of customers) {
+      operationalTotal = roundMoney(operationalTotal + (await getCustomerOutstanding(prisma, customer.id)));
+    }
+
+    if (Math.abs(arBalance - operationalTotal) > 0.01) {
+      arMismatch = true;
+      issues.push({
+        type: "AR_OPERATIONAL_MISMATCH",
+        message: `GL AR (${arBalance}) does not match operational outstanding (${operationalTotal})`,
+        recordId: 0,
+      });
+    }
+  } catch (error) {
+    issues.push({
+      type: "AR_CHECK_FAILED",
+      message: error.message || "Failed to compare AR balances",
+      recordId: 0,
+    });
+  }
+
   return success({
     summary: {
       journalCount: entries.length,
@@ -83,10 +117,15 @@ export async function runIntegrityChecks() {
       invalidMappingCount,
       missingMappingCount: missingRoles.length,
       negativeStockCount: negativeStock.length,
+      arMismatch,
       issueCount: issues.length,
     },
     issues,
-    healthy: unbalancedCount === 0 && orphans.length === 0 && missingRoles.length === 0,
+    healthy:
+      unbalancedCount === 0 &&
+      orphans.length === 0 &&
+      missingRoles.length === 0 &&
+      !arMismatch,
   });
 }
 

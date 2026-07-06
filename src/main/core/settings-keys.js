@@ -18,6 +18,7 @@ export const SETTING_KEYS = {
   ALLOW_NEGATIVE_STOCK: "allow_negative_stock",
   HALT_ON_EXPIRY: "halt_on_expiry",
   DEFAULT_PAYMENT_TERMS: "default_payment_terms",
+  CREDIT_LIMIT_POLICY: "credit_limit_policy",
 
   AUTO_BACKUP_ENABLED: "auto_backup_enabled",
   AUTO_BACKUP_HOUR: "auto_backup_hour",
@@ -30,6 +31,11 @@ export const SETTING_KEYS = {
   DOCUMENT_SHOW_BATCH: "document_show_batch",
   DOCUMENT_SHOW_EXPIRY: "document_show_expiry",
   INVOICE_TERMS_TEXT: "invoice_terms_text",
+};
+
+export const CREDIT_LIMIT_POLICIES = {
+  WARN: "WARN",
+  BLOCK: "BLOCK",
 };
 
 export const DEFAULT_SETTINGS = {
@@ -51,6 +57,7 @@ export const DEFAULT_SETTINGS = {
   [SETTING_KEYS.ALLOW_NEGATIVE_STOCK]: "false",
   [SETTING_KEYS.HALT_ON_EXPIRY]: "true",
   [SETTING_KEYS.DEFAULT_PAYMENT_TERMS]: "30",
+  [SETTING_KEYS.CREDIT_LIMIT_POLICY]: CREDIT_LIMIT_POLICIES.BLOCK,
 
   [SETTING_KEYS.AUTO_BACKUP_ENABLED]: "false",
   [SETTING_KEYS.AUTO_BACKUP_HOUR]: "2",

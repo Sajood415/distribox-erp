@@ -72,6 +72,8 @@ contextBridge.exposeInMainWorld("api", {
     convertQuotation: (id) => invoke("sales:quotations:convert", { id }),
     listInvoices: () => invoke("sales:invoices:list"),
     saveInvoice: (data) => invoke("sales:invoices:save", data),
+    getCustomerOutstanding: (customerId) =>
+      invoke("sales:customer:outstanding", { customerId }),
     listPendingDeliveries: () => invoke("sales:invoices:pending"),
     listRecoveries: () => invoke("sales:recoveries:list"),
     saveRecovery: (data) => invoke("sales:recoveries:save", data),

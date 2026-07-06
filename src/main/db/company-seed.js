@@ -15,13 +15,26 @@ const DEFAULT_ACCOUNTS = [
   { code: "1400", name: "Accounts Receivable", type: "Asset" },
   { code: "2000", name: "Liabilities", type: "Liability" },
   { code: "2100", name: "Accounts Payable", type: "Liability" },
+  { code: "2200", name: "Tax Payable", type: "Liability" },
   { code: "3000", name: "Equity", type: "Equity" },
   { code: "4000", name: "Sales Revenue", type: "Income" },
+  { code: "4100", name: "Freight Income", type: "Income" },
   { code: "5000", name: "Cost of Goods Sold", type: "Expense" },
   { code: "5100", name: "Operating Expenses", type: "Expense" },
+  { code: "5200", name: "Inventory Adjustment Gain", type: "Income" },
+  { code: "5210", name: "Inventory Adjustment Loss", type: "Expense" },
 ];
 
 const DEFAULT_DELIVERY_MEN = [{ name: "Default Delivery" }];
+
+async function ensureDefaultAccounts(prisma) {
+  for (const account of DEFAULT_ACCOUNTS) {
+    const existing = await prisma.account.findUnique({ where: { code: account.code } });
+    if (!existing) {
+      await prisma.account.create({ data: account });
+    }
+  }
+}
 
 export async function seedCompanyDatabase(prisma) {
   const unitCount = await prisma.unit.count();
@@ -32,6 +45,8 @@ export async function seedCompanyDatabase(prisma) {
   const accountCount = await prisma.account.count();
   if (accountCount === 0) {
     await prisma.account.createMany({ data: DEFAULT_ACCOUNTS });
+  } else {
+    await ensureDefaultAccounts(prisma);
   }
 
   const deliveryCount = await prisma.deliveryMan.count();

@@ -9,6 +9,9 @@ function failure(error) {
   return { success: false, error };
 }
 
+export { getCustomerOutstanding, getInvoiceOutstanding } from "../domain/customer-outstanding";
+export { buildCustomerOutstandingBreakdown } from "../domain/customer-outstanding";
+
 export function normalizeSaleItems(items = []) {
   return items
     .filter((item) => item.productId && Number(item.quantity) > 0)
@@ -30,19 +33,6 @@ export function normalizeSaleItems(items = []) {
         vat,
       };
     });
-}
-
-export async function getCustomerOutstanding(tx, customerId) {
-  const invoices = await tx.salesInvoice.findMany({
-    where: { customerId, isCredit: true },
-    select: { total: true, paidAmount: true },
-  });
-  const invoiceOutstanding = invoices.reduce(
-    (sum, invoice) => sum + (invoice.total - invoice.paidAmount),
-    0
-  );
-  const customer = await tx.customer.findUnique({ where: { id: customerId } });
-  return roundMoney((customer?.openingBalance || 0) + invoiceOutstanding);
 }
 
 async function nextNumber(tx, model, prefixCode) {

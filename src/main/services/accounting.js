@@ -1,10 +1,27 @@
+import { roundMoney } from "../utils/money";
 import { ACCOUNT_ROLES, SOURCE_DOCUMENT_TYPES } from "../core/account-roles";
 import { postJournal } from "./posting-engine";
 
-export async function postPurchaseJournal(tx, invoice) {
-  const inventoryAmount = invoice.subtotal + invoice.freight + invoice.taxTotal;
+function buildSalesRevenueLines(invoice) {
   const lines = [
-    { accountRole: ACCOUNT_ROLES.PURCHASE_ACCOUNT, debit: inventoryAmount, credit: 0 },
+    { accountRole: ACCOUNT_ROLES.SALES_REVENUE, debit: 0, credit: invoice.subtotal },
+  ];
+
+  if (invoice.taxTotal > 0) {
+    lines.push({ accountRole: ACCOUNT_ROLES.TAX_PAYABLE, debit: 0, credit: invoice.taxTotal });
+  }
+
+  if (invoice.freight > 0) {
+    lines.push({ accountRole: ACCOUNT_ROLES.FREIGHT_INCOME, debit: 0, credit: invoice.freight });
+  }
+
+  return lines;
+}
+
+export async function postPurchaseJournal(tx, invoice) {
+  const inventoryAmount = roundMoney(invoice.subtotal + invoice.freight + invoice.taxTotal);
+  const lines = [
+    { accountRole: ACCOUNT_ROLES.INVENTORY, debit: inventoryAmount, credit: 0 },
   ];
 
   if (invoice.isCredit) {
@@ -36,15 +53,14 @@ export async function postPurchaseReturnJournal(tx, purchaseReturn) {
     description: `Purchase Return ${purchaseReturn.number}`,
     lines: [
       { accountRole: ACCOUNT_ROLES.ACCOUNTS_PAYABLE, debit: purchaseReturn.total, credit: 0 },
-      { accountRole: ACCOUNT_ROLES.PURCHASE_RETURN, debit: 0, credit: purchaseReturn.total },
+      { accountRole: ACCOUNT_ROLES.INVENTORY, debit: 0, credit: purchaseReturn.total },
     ],
   });
 }
 
 export async function postSalesJournal(tx, invoice) {
-  const revenueAmount = invoice.subtotal + invoice.taxTotal;
   const lines = [
-    { accountRole: ACCOUNT_ROLES.SALES_REVENUE, debit: 0, credit: revenueAmount },
+    ...buildSalesRevenueLines(invoice),
     { accountRole: ACCOUNT_ROLES.COGS, debit: invoice.cogsTotal, credit: 0 },
     { accountRole: ACCOUNT_ROLES.INVENTORY, debit: 0, credit: invoice.cogsTotal },
   ];
@@ -126,5 +142,4 @@ export async function postClaimWriteOffJournal(tx, claim) {
   });
 }
 
-// Backward-compatible alias — all callers must use posting-engine via these functions.
 export { postJournal as postJournalEntry };

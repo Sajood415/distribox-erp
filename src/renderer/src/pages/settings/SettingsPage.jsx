@@ -30,6 +30,15 @@ const SETTING_GROUPS = [
     ],
   },
   {
+    title: "Sales Policies",
+    keys: [
+      {
+        key: "credit_limit_policy",
+        label: "Credit Limit Policy (WARN / BLOCK)",
+      },
+    ],
+  },
+  {
     title: "Stock Policies",
     keys: [
       { key: "allow_negative_stock", label: "Allow Negative Stock (true/false)" },
@@ -72,10 +81,13 @@ const MAPPING_ROLE_LABELS = {
   ACCOUNTS_PAYABLE: "Accounts Payable",
   SALES_REVENUE: "Sales Revenue",
   SALES_RETURN: "Sales Return",
+  TAX_PAYABLE: "Tax Payable",
+  FREIGHT_INCOME: "Freight Income",
   PURCHASE_ACCOUNT: "Purchase Account",
   PURCHASE_RETURN: "Purchase Return",
   COGS: "Cost Of Goods Sold",
-  INVENTORY_ADJUSTMENT: "Inventory Adjustment",
+  INVENTORY_ADJUSTMENT_GAIN: "Inventory Adjustment Gain",
+  INVENTORY_ADJUSTMENT_LOSS: "Inventory Adjustment Loss",
   CLAIMS_EXPENSE: "Claims Expense",
   RECOVERY_ACCOUNT: "Recovery Account",
   EQUITY: "Equity",

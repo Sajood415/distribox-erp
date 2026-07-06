@@ -19,11 +19,11 @@ export async function postStockAdjustmentJournal(tx, adjustment) {
   } else if (adjustment.quantityChange > 0) {
     lines = [
       { accountRole: ACCOUNT_ROLES.INVENTORY, debit: value, credit: 0 },
-      { accountRole: ACCOUNT_ROLES.INVENTORY_ADJUSTMENT, debit: 0, credit: value },
+      { accountRole: ACCOUNT_ROLES.INVENTORY_ADJUSTMENT_GAIN, debit: 0, credit: value },
     ];
   } else {
     lines = [
-      { accountRole: ACCOUNT_ROLES.INVENTORY_ADJUSTMENT, debit: value, credit: 0 },
+      { accountRole: ACCOUNT_ROLES.INVENTORY_ADJUSTMENT_LOSS, debit: value, credit: 0 },
       { accountRole: ACCOUNT_ROLES.INVENTORY, debit: 0, credit: value },
     ];
   }

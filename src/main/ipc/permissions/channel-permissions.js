@@ -56,6 +56,7 @@ const AUTH_CHANNELS = new Set([
   "sales:quotations:convert",
   "sales:invoices:list",
   "sales:invoices:save",
+  "sales:customer:outstanding",
   "sales:invoices:pending",
   "sales:recoveries:list",
   "sales:recoveries:save",

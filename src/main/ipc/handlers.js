@@ -54,6 +54,7 @@ import { listQuotations, saveQuotation, getSalesLookups } from "../services/quot
 import {
   listSalesInvoices,
   saveSalesInvoice,
+  getCustomerOutstandingSummary,
   listPendingDeliveries,
   convertQuotationToInvoice,
 } from "../services/sales";
@@ -193,6 +194,7 @@ export function registerIpcHandlers() {
   registerHandler(ipcMain, "sales:quotations:convert", convertQuotationToInvoice);
   registerHandler(ipcMain, "sales:invoices:list", listSalesInvoices);
   registerHandler(ipcMain, "sales:invoices:save", saveSalesInvoice);
+  registerHandler(ipcMain, "sales:customer:outstanding", getCustomerOutstandingSummary);
   registerHandler(ipcMain, "sales:invoices:pending", listPendingDeliveries);
   registerHandler(ipcMain, "sales:recoveries:list", listRecoveries);
   registerHandler(ipcMain, "sales:recoveries:save", saveRecovery);

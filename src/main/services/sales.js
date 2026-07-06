@@ -2,8 +2,12 @@ import { getCompanyPrisma } from "../db/init";
 import { roundMoney } from "../utils/money";
 import { issueStockFIFO } from "./stock";
 import { postSalesJournal } from "./accounting";
+import { getSettingValue } from "./settings-service";
+import { SETTING_KEYS, CREDIT_LIMIT_POLICIES } from "../core/settings-keys";
 import {
   getCustomerOutstanding,
+  getInvoiceOutstanding,
+  buildCustomerOutstandingBreakdown,
   normalizeSaleItems,
 } from "./quotation";
 
@@ -11,8 +15,8 @@ function success(data) {
   return { success: true, data };
 }
 
-function failure(error) {
-  return { success: false, error };
+function failure(error, extra = {}) {
+  return { success: false, error, ...extra };
 }
 
 async function nextSalesNumber(tx) {
@@ -38,12 +42,16 @@ export async function listSalesInvoices() {
       items: { include: { product: true } },
     },
   });
-  return success(
-    data.map((invoice) => ({
-      ...invoice,
-      outstanding: roundMoney(invoice.total - invoice.paidAmount),
-    }))
-  );
+
+  const rows = [];
+  for (const invoice of data) {
+    const outstanding = invoice.isCredit
+      ? await getInvoiceOutstanding(prisma, invoice)
+      : 0;
+    rows.push({ ...invoice, outstanding });
+  }
+
+  return success(rows);
 }
 
 export async function listPendingDeliveries() {
@@ -80,22 +88,31 @@ export async function saveSalesInvoice(payload) {
     return failure("Paid amount cannot exceed invoice total");
   }
 
+  const customer = await prisma.customer.findUnique({
+    where: { id: Number(payload.customerId) },
+  });
+  if (!customer) {
+    return failure("Customer not found");
+  }
+
+  if (payload.isCredit && customer.creditLimit > 0) {
+    const outstanding = await getCustomerOutstanding(prisma, customer.id);
+    if (outstanding + total > customer.creditLimit) {
+      const policy = (await getSettingValue(SETTING_KEYS.CREDIT_LIMIT_POLICY)) || CREDIT_LIMIT_POLICIES.BLOCK;
+      if (policy === CREDIT_LIMIT_POLICIES.BLOCK) {
+        return failure("Customer credit limit exceeded");
+      }
+      if (!payload.confirmCreditOverride) {
+        return failure("Customer credit limit exceeded. Confirm to proceed.", {
+          requiresConfirmation: true,
+          code: "CREDIT_LIMIT_WARN",
+        });
+      }
+    }
+  }
+
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const customer = await tx.customer.findUnique({
-        where: { id: Number(payload.customerId) },
-      });
-      if (!customer) {
-        throw new Error("Customer not found");
-      }
-
-      if (payload.isCredit && customer.creditLimit > 0) {
-        const outstanding = await getCustomerOutstanding(tx, customer.id);
-        if (outstanding + total > customer.creditLimit) {
-          throw new Error("Customer credit limit exceeded");
-        }
-      }
-
       let cogsTotal = 0;
       const itemRecords = [];
 
@@ -172,6 +189,13 @@ export async function saveSalesInvoice(payload) {
   } catch (error) {
     return failure(error.message || "Failed to save sales invoice");
   }
+}
+
+export async function getCustomerOutstandingSummary(payload) {
+  const customerId = payload?.customerId ?? payload;
+  const prisma = getCompanyPrisma();
+  const breakdown = await buildCustomerOutstandingBreakdown(prisma, Number(customerId));
+  return success(breakdown);
 }
 
 export async function convertQuotationToInvoice(quotationId) {

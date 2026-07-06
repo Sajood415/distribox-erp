@@ -21,6 +21,7 @@ export default function SalesInvoiceFormPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [creditWarning, setCreditWarning] = useState("");
+  const [creditLimitPolicy, setCreditLimitPolicy] = useState("BLOCK");
 
   const [form, setForm] = useState({
     date: todayInputValue(),
@@ -42,7 +43,10 @@ export default function SalesInvoiceFormPage() {
 
   useEffect(() => {
     async function load() {
-      const result = await window.api.sales.lookups();
+      const [result, settingsResult] = await Promise.all([
+        window.api.sales.lookups(),
+        window.api.settings.get(),
+      ]);
       if (result.success) {
         setLookups(result.data);
         if (result.data.warehouses.length > 0) {
@@ -51,6 +55,9 @@ export default function SalesInvoiceFormPage() {
             warehouseId: String(result.data.warehouses[0].id),
           }));
         }
+      }
+      if (settingsResult.success) {
+        setCreditLimitPolicy(settingsResult.data.settings.credit_limit_policy || "BLOCK");
       }
       setLoading(false);
     }
@@ -68,13 +75,16 @@ export default function SalesInvoiceFormPage() {
         setCreditWarning("");
         return;
       }
-      const outstandingResult = await window.api.sales.getOutstandingInvoices(Number(form.customerId));
+      const outstandingResult = await window.api.sales.getCustomerOutstanding(Number(form.customerId));
       if (outstandingResult.success) {
-        const current = outstandingResult.data.reduce((sum, inv) => sum + inv.outstanding, 0);
-        const projected = current + customer.openingBalance + totals.total;
+        const projected = outstandingResult.data.outstanding + totals.total;
         if (projected > customer.creditLimit) {
+          const prefix =
+            creditLimitPolicy === "WARN"
+              ? "Warning"
+              : "Blocked";
           setCreditWarning(
-            `Warning: projected balance ${projected.toFixed(2)} exceeds credit limit ${customer.creditLimit.toFixed(2)}`
+            `${prefix}: projected balance ${projected.toFixed(2)} exceeds credit limit ${customer.creditLimit.toFixed(2)}`
           );
         } else {
           setCreditWarning("");
@@ -82,7 +92,7 @@ export default function SalesInvoiceFormPage() {
       }
     }
     checkCredit();
-  }, [form.customerId, form.isCredit, totals.total, lookups.customers]);
+  }, [form.customerId, form.isCredit, totals.total, lookups.customers, creditLimitPolicy]);
 
   function updateField(key, value) {
     setForm((current) => {
@@ -125,8 +135,7 @@ export default function SalesInvoiceFormPage() {
     }));
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  async function submitInvoice(confirmCreditOverride = false) {
     setSaving(true);
     setError("");
 
@@ -136,6 +145,7 @@ export default function SalesInvoiceFormPage() {
       warehouseId: Number(form.warehouseId),
       salesmanId: form.salesmanId ? Number(form.salesmanId) : null,
       deliveryManId: form.deliveryManId ? Number(form.deliveryManId) : null,
+      confirmCreditOverride,
       items: form.items.map((item) => ({
         ...item,
         productId: Number(item.productId),
@@ -145,10 +155,24 @@ export default function SalesInvoiceFormPage() {
 
     setSaving(false);
     if (!result.success) {
+      if (result.requiresConfirmation && creditLimitPolicy === "WARN") {
+        const proceed = window.confirm(
+          `${result.error}\n\nSave this invoice anyway?`
+        );
+        if (proceed) {
+          await submitInvoice(true);
+        }
+        return;
+      }
       setError(result.error);
       return;
     }
     navigate("/sales/invoices");
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    await submitInvoice(false);
   }
 
   if (loading) return <p>Loading sales form...</p>;

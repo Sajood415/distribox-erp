@@ -1,6 +1,7 @@
 import { getCompanyPrisma } from "../db/init";
 import { roundMoney } from "../utils/money";
 import { postRecoveryJournal } from "./accounting";
+import { getInvoiceOutstanding } from "../domain/customer-outstanding";
 
 function success(data) {
   return { success: true, data };
@@ -31,17 +32,21 @@ export async function getCustomerOutstandingInvoices(customerId) {
     orderBy: { date: "asc" },
   });
 
-  const data = invoices
-    .map((invoice) => ({
-      id: invoice.id,
-      number: invoice.number,
-      date: invoice.date,
-      dueDate: invoice.dueDate,
-      total: invoice.total,
-      paidAmount: invoice.paidAmount,
-      outstanding: roundMoney(invoice.total - invoice.paidAmount),
-    }))
-    .filter((invoice) => invoice.outstanding > 0);
+  const data = [];
+  for (const invoice of invoices) {
+    const outstanding = await getInvoiceOutstanding(prisma, invoice);
+    if (outstanding > 0) {
+      data.push({
+        id: invoice.id,
+        number: invoice.number,
+        date: invoice.date,
+        dueDate: invoice.dueDate,
+        total: invoice.total,
+        paidAmount: invoice.paidAmount,
+        outstanding,
+      });
+    }
+  }
 
   return success(data);
 }
@@ -89,7 +94,7 @@ export async function saveRecovery(payload) {
           if (!invoice) {
             throw new Error("Invoice not found");
           }
-          const outstanding = roundMoney(invoice.total - invoice.paidAmount);
+          const outstanding = await getInvoiceOutstanding(tx, invoice);
           const applyAmount = roundMoney(item.amount);
           if (applyAmount > outstanding) {
             throw new Error(`Amount exceeds outstanding for ${invoice.number}`);

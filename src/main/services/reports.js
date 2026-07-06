@@ -4,6 +4,11 @@ import { ACCOUNT_ROLES } from "../core/account-roles";
 import { resolveAccountIdByRole } from "./account-mapping-service";
 import { listAccounts } from "../repositories/account-repository";
 import {
+  getCustomerOutstanding,
+  getInvoiceOutstanding,
+  sumSalesReturns,
+} from "../domain/customer-outstanding";
+import {
   findJournalLinesInRange,
   findJournalLinesCumulative,
 } from "../repositories/journal-repository";
@@ -75,7 +80,7 @@ export async function getAgingReport(payload = {}) {
   const customerMap = new Map();
 
   for (const invoice of invoices) {
-    const outstanding = roundMoney(invoice.total - invoice.paidAmount);
+    const outstanding = await getInvoiceOutstanding(prisma, invoice);
     if (outstanding <= 0) continue;
 
     const dueDate = resolveDueDate(invoice, invoice.customer);
@@ -142,6 +147,12 @@ export async function getAgingReport(payload = {}) {
     const row = customerMap.get(key);
     row.days120Plus = roundMoney(row.days120Plus + customer.openingBalance);
     row.total = roundMoney(row.total + customer.openingBalance);
+
+    const unlinkedReturns = await sumSalesReturns(prisma, customer.id, { unlinkedOnly: true });
+    if (unlinkedReturns > 0) {
+      row.current = roundMoney(Math.max(0, row.current - unlinkedReturns));
+      row.total = roundMoney(row.total - unlinkedReturns);
+    }
   }
 
   const rows = Array.from(customerMap.values())
@@ -274,30 +285,24 @@ export async function getCustomerOutstandingReport() {
     orderBy: { name: "asc" },
   });
 
-  const invoices = await prisma.salesInvoice.findMany({
-    where: { isCredit: true },
-    select: { customerId: true, total: true, paidAmount: true },
-  });
+  const rows = [];
+  for (const customer of customers) {
+    const outstanding = await getCustomerOutstanding(prisma, customer.id);
+    if (outstanding <= 0) continue;
 
-  const rows = customers
-    .map((customer) => {
-      const invoiceOutstanding = invoices
-        .filter((inv) => inv.customerId === customer.id)
-        .reduce((sum, inv) => sum + (inv.total - inv.paidAmount), 0);
-      const outstanding = roundMoney(customer.openingBalance + invoiceOutstanding);
-      return {
-        customerId: customer.id,
-        code: customer.code,
-        name: customer.name,
-        salesman: customer.salesman?.name ?? "-",
-        creditLimit: customer.creditLimit,
-        openingBalance: customer.openingBalance,
-        outstanding,
-        available: roundMoney(customer.creditLimit - outstanding),
-      };
-    })
-    .filter((row) => row.outstanding > 0)
-    .sort((a, b) => b.outstanding - a.outstanding);
+    rows.push({
+      customerId: customer.id,
+      code: customer.code,
+      name: customer.name,
+      salesman: customer.salesman?.name ?? "-",
+      creditLimit: customer.creditLimit,
+      openingBalance: customer.openingBalance,
+      outstanding,
+      available: roundMoney(customer.creditLimit - outstanding),
+    });
+  }
+
+  rows.sort((a, b) => b.outstanding - a.outstanding);
 
   return success({
     rows,

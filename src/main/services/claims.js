@@ -1,6 +1,6 @@
 import { getCompanyPrisma } from "../db/init";
 import { calcLineNet, calcLineVat, roundMoney } from "../utils/money";
-import { increaseStock } from "./stock";
+import { increaseStock, decreaseStock } from "./stock";
 import { postClaimWriteOffJournal } from "./accounting";
 import { savePurchaseReturn } from "./purchase-return";
 import { saveSalesReturn } from "./sales-return";
@@ -292,18 +292,11 @@ export async function settleClaim(payload) {
         const cogsTotal = await resolveClaimCogs(prisma, claim.items, claim.warehouseId);
         await prisma.$transaction(async (tx) => {
           for (const item of claim.items) {
-            const stock = await tx.stock.findFirst({
-              where: { productId: item.productId, warehouseId: claim.warehouseId },
-              orderBy: { createdAt: "desc" },
-            });
-            const unitCost = stock?.costPerUnit || 0;
-            const product = await tx.product.findUnique({ where: { id: item.productId } });
-            await increaseStock(tx, {
+            await decreaseStock(tx, {
               productId: item.productId,
               warehouseId: claim.warehouseId,
               batchNo: item.batchNo,
               quantity: item.quantity,
-              costPerUnit: unitCost || product?.costPrice || 0,
             });
           }
 
