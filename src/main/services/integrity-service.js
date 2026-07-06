@@ -8,6 +8,10 @@ import {
   findJournalLinesCumulative,
 } from "../repositories/journal-repository";
 import { ACCOUNT_ROLES } from "../core/account-roles";
+import {
+  getVendorOutstanding,
+  buildVendorOutstandingBreakdown,
+} from "../domain/vendor-outstanding";
 import { getCustomerOutstanding } from "../domain/customer-outstanding";
 import { resolveAccountIdByRole } from "./account-mapping-service";
 
@@ -109,6 +113,37 @@ export async function runIntegrityChecks() {
     });
   }
 
+  let apMismatch = false;
+  try {
+    const apAccountId = await resolveAccountIdByRole(prisma, ACCOUNT_ROLES.ACCOUNTS_PAYABLE);
+    const apLines = await findJournalLinesCumulative(prisma, {
+      end: new Date(),
+      accountId: apAccountId,
+    });
+    const apBalance = roundMoney(apLines.reduce((sum, line) => sum + line.credit - line.debit, 0));
+
+    const vendors = await prisma.vendor.findMany({ select: { id: true } });
+    let vendorOperational = 0;
+    for (const vendor of vendors) {
+      vendorOperational = roundMoney(vendorOperational + (await getVendorOutstanding(prisma, vendor.id)));
+    }
+
+    if (Math.abs(apBalance - vendorOperational) > 0.01) {
+      apMismatch = true;
+      issues.push({
+        type: "AP_OPERATIONAL_MISMATCH",
+        message: `GL AP (${apBalance}) does not match supplier outstanding (${vendorOperational})`,
+        recordId: 0,
+      });
+    }
+  } catch (error) {
+    issues.push({
+      type: "AP_CHECK_FAILED",
+      message: error.message || "Failed to compare AP balances",
+      recordId: 0,
+    });
+  }
+
   return success({
     summary: {
       journalCount: entries.length,
@@ -118,6 +153,7 @@ export async function runIntegrityChecks() {
       missingMappingCount: missingRoles.length,
       negativeStockCount: negativeStock.length,
       arMismatch,
+      apMismatch,
       issueCount: issues.length,
     },
     issues,
@@ -125,7 +161,8 @@ export async function runIntegrityChecks() {
       unbalancedCount === 0 &&
       orphans.length === 0 &&
       missingRoles.length === 0 &&
-      !arMismatch,
+      !arMismatch &&
+      !apMismatch,
   });
 }
 

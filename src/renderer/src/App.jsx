@@ -15,6 +15,7 @@ import RoutesPage from "./pages/masters/RoutesPage";
 import PurchaseInvoicesPage from "./pages/purchase/PurchaseInvoicesPage";
 import PurchaseInvoiceFormPage from "./pages/purchase/PurchaseInvoiceFormPage";
 import PurchaseReturnsPage from "./pages/purchase/PurchaseReturnsPage";
+import VendorPaymentPage from "./pages/purchase/VendorPaymentPage";
 import StockPage from "./pages/inventory/StockPage";
 import OpeningStockPage from "./pages/inventory/OpeningStockPage";
 import StockTakePage from "./pages/inventory/StockTakePage";
@@ -42,6 +43,11 @@ import CustomerReportsPage from "./pages/reports/CustomerReportsPage";
 import SalesmanReportsPage from "./pages/reports/SalesmanReportsPage";
 import ProductReportsPage from "./pages/reports/ProductReportsPage";
 import PurchaseReportPage from "./pages/reports/PurchaseReportPage";
+import CustomerLedgerPage from "./pages/reports/CustomerLedgerPage";
+import SupplierLedgerPage from "./pages/reports/SupplierLedgerPage";
+import OutstandingStatementPage from "./pages/reports/OutstandingStatementPage";
+import CustomerStatementPage from "./pages/reports/CustomerStatementPage";
+import SupplierStatementPage from "./pages/reports/SupplierStatementPage";
 import DatabaseHealthPage from "./pages/tools/DatabaseHealthPage";
 import ToolsHubPage from "./pages/tools/ToolsHubPage";
 import BackupPage from "./pages/tools/BackupPage";
@@ -100,6 +106,7 @@ function AppRoutes() {
         <Route path="purchase/invoices" element={<PurchaseInvoicesPage />} />
         <Route path="purchase/invoices/new" element={<PurchaseInvoiceFormPage />} />
         <Route path="purchase/returns" element={<PurchaseReturnsPage />} />
+        <Route path="purchase/payments" element={<VendorPaymentPage />} />
         <Route path="inventory/stock" element={<StockPage />} />
         <Route path="inventory/opening-stock" element={<OpeningStockPage />} />
         <Route path="inventory/stock-take" element={<StockTakePage />} />
@@ -127,6 +134,11 @@ function AppRoutes() {
         <Route path="reports/salesmen" element={<SalesmanReportsPage />} />
         <Route path="reports/products" element={<ProductReportsPage />} />
         <Route path="reports/purchases" element={<PurchaseReportPage />} />
+        <Route path="reports/customer-ledger" element={<CustomerLedgerPage />} />
+        <Route path="reports/supplier-ledger" element={<SupplierLedgerPage />} />
+        <Route path="reports/outstanding-statement" element={<OutstandingStatementPage />} />
+        <Route path="reports/customer-statement" element={<CustomerStatementPage />} />
+        <Route path="reports/supplier-statement" element={<SupplierStatementPage />} />
         <Route path="tools" element={<ToolsHubPage />} />
         <Route path="tools/backup" element={<BackupPage />} />
         <Route path="tools/database-health" element={<DatabaseHealthPage />} />

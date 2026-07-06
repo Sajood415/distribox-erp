@@ -2,6 +2,17 @@ import { Link } from "react-router-dom";
 
 const reportGroups = [
   {
+    title: "Sub-Ledgers",
+    reports: [
+      { to: "/reports/customer-ledger", label: "Customer Ledger", desc: "Full AR transaction history with running balance" },
+      { to: "/reports/customer-statement", label: "Statement of Account", desc: "Printable customer account statement" },
+      { to: "/reports/supplier-ledger", label: "Supplier Ledger", desc: "Full AP transaction history with running balance" },
+      { to: "/reports/supplier-statement", label: "Supplier Statement", desc: "Printable supplier account statement" },
+      { to: "/reports/outstanding-statement", label: "Outstanding Statement", desc: "All customers and suppliers with balances" },
+      { to: "/reports/aging", label: "Aging Report", desc: "Customer outstanding by due-date buckets" },
+    ],
+  },
+  {
     title: "Financial Statements",
     reports: [
       { to: "/reports/aging", label: "Aging Report", desc: "Customer outstanding by due-date buckets" },
@@ -15,6 +26,7 @@ const reportGroups = [
     title: "Customer & Sales",
     reports: [
       { to: "/reports/customers", label: "Customer Reports", desc: "Outstanding balances, sales, recovery" },
+      { to: "/purchase/payments", label: "Supplier Payments", desc: "Pay suppliers against purchase invoices" },
       { to: "/reports/salesmen", label: "Salesman Reports", desc: "Sales, recovery, and commission" },
     ],
   },

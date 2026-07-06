@@ -64,6 +64,10 @@ contextBridge.exposeInMainWorld("api", {
     previewTotals: (data) => invoke("purchase:invoices:preview", data),
     listReturns: () => invoke("purchase:returns:list"),
     saveReturn: (data) => invoke("purchase:returns:save", data),
+    listPayments: () => invoke("purchase:payments:list"),
+    savePayment: (data) => invoke("purchase:payments:save", data),
+    getOutstandingInvoices: (vendorId) =>
+      invoke("purchase:payments:outstanding", { vendorId }),
   },
   sales: {
     lookups: () => invoke("sales:lookups"),
@@ -136,6 +140,12 @@ contextBridge.exposeInMainWorld("api", {
     purchases: (filters) => invoke("reports:purchases", filters || {}),
     stockValuation: () => invoke("reports:stockvaluation"),
     commission: (filters) => invoke("reports:commission", filters || {}),
+    subLedgerLookups: () => invoke("reports:subledgerlookups"),
+    customerLedger: (filters) => invoke("reports:customerledger", filters || {}),
+    supplierLedger: (filters) => invoke("reports:supplierledger", filters || {}),
+    customerStatement: (filters) => invoke("reports:customerstatement", filters || {}),
+    supplierStatement: (filters) => invoke("reports:supplierstatement", filters || {}),
+    outstandingStatement: (filters) => invoke("reports:outstandingstatement", filters || {}),
   },
   tools: {
     backup: () => invoke("tools:backup"),

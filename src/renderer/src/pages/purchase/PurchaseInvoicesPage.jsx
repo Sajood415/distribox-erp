@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import DataTable from "../../components/DataTable";
+import useDocIdHighlight from "../../hooks/useDocIdHighlight";
 
 const columns = [
   { accessorKey: "number", header: "Invoice #" },
@@ -38,6 +39,7 @@ const columns = [
 ];
 
 export default function PurchaseInvoicesPage() {
+  const highlightRowId = useDocIdHighlight();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -76,6 +78,7 @@ export default function PurchaseInvoicesPage() {
           data={rows}
           showActions={false}
           searchPlaceholder="Search invoices..."
+          highlightRowId={highlightRowId}
         />
       )}
     </div>

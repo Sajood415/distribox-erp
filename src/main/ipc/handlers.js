@@ -124,13 +124,26 @@ import {
   getAccountMappings,
   saveAccountMapping,
 } from "../services/account-mapping-service";
-import { extractToken } from "./middleware/ipc-auth";
+import {
+  getVendorOutstandingInvoices,
+  listVendorPayments,
+  saveVendorPayment,
+} from "../services/vendor-payment";
+import {
+  getCustomerLedger,
+  getSupplierLedger,
+  getCustomerStatement,
+  getSupplierStatement,
+  getOutstandingStatement,
+  getSubLedgerLookups,
+} from "../services/sub-ledger-service";
 import {
   getSettings,
   saveSettings,
   listDocumentSequences,
   saveDocumentSequence,
 } from "../services/settings-service";
+import { extractToken } from "./middleware/ipc-auth";
 
 export function registerIpcHandlers() {
   registerHandler(ipcMain, "auth:login", loginUser);
@@ -174,6 +187,9 @@ export function registerIpcHandlers() {
   registerHandler(ipcMain, "purchase:invoices:preview", previewPurchaseTotals);
   registerHandler(ipcMain, "purchase:returns:list", listPurchaseReturns);
   registerHandler(ipcMain, "purchase:returns:save", savePurchaseReturn);
+  registerHandler(ipcMain, "purchase:payments:list", listVendorPayments);
+  registerHandler(ipcMain, "purchase:payments:save", saveVendorPayment);
+  registerHandler(ipcMain, "purchase:payments:outstanding", getVendorOutstandingInvoices);
 
   registerHandler(ipcMain, "stock:list", listStock);
 
@@ -238,6 +254,12 @@ export function registerIpcHandlers() {
   registerHandler(ipcMain, "reports:purchases", getPurchaseReport);
   registerHandler(ipcMain, "reports:stockvaluation", getStockValuationReport);
   registerHandler(ipcMain, "reports:commission", getCommissionReport);
+  registerHandler(ipcMain, "reports:customerledger", getCustomerLedger);
+  registerHandler(ipcMain, "reports:supplierledger", getSupplierLedger);
+  registerHandler(ipcMain, "reports:customerstatement", getCustomerStatement);
+  registerHandler(ipcMain, "reports:supplierstatement", getSupplierStatement);
+  registerHandler(ipcMain, "reports:outstandingstatement", getOutstandingStatement);
+  registerHandler(ipcMain, "reports:subledgerlookups", getSubLedgerLookups);
 
   registerHandler(
     ipcMain,

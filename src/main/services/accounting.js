@@ -102,6 +102,23 @@ export async function postRecoveryJournal(tx, recovery) {
   });
 }
 
+export async function postVendorPaymentJournal(tx, payment) {
+  const creditRole =
+    payment.paymentMode === "Bank" ? ACCOUNT_ROLES.BANK : ACCOUNT_ROLES.CASH;
+
+  return postJournal(tx, {
+    referenceNumber: payment.number,
+    sourceDocumentType: SOURCE_DOCUMENT_TYPES.VENDOR_PAYMENT,
+    sourceDocumentId: payment.id,
+    postingDate: payment.date,
+    description: `Vendor Payment ${payment.number}`,
+    lines: [
+      { accountRole: ACCOUNT_ROLES.ACCOUNTS_PAYABLE, debit: payment.amount, credit: 0 },
+      { accountRole: creditRole, debit: 0, credit: payment.amount },
+    ],
+  });
+}
+
 export async function postSalesReturnJournal(tx, salesReturn) {
   const cogsTotal = salesReturn.cogsTotal || 0;
   const lines = [

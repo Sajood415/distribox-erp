@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import DataTable from "../../components/DataTable";
+import useDocIdHighlight from "../../hooks/useDocIdHighlight";
 import {
   calcPurchaseLine,
   calcPurchaseTotals,
@@ -29,6 +30,7 @@ const listColumns = [
 ];
 
 export default function SalesReturnsPage() {
+  const highlightRowId = useDocIdHighlight();
   const [lookups, setLookups] = useState({
     customers: [],
     products: [],
@@ -299,7 +301,13 @@ export default function SalesReturnsPage() {
       {loading ? (
         <p>Loading...</p>
       ) : (
-        <DataTable columns={listColumns} data={rows} showActions={false} searchPlaceholder="Search returns..." />
+        <DataTable
+          columns={listColumns}
+          data={rows}
+          showActions={false}
+          searchPlaceholder="Search returns..."
+          highlightRowId={highlightRowId}
+        />
       )}
     </div>
   );

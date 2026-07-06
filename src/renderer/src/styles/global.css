@@ -597,6 +597,24 @@ label {
   background: var(--primary-hover);
 }
 
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--primary);
+  cursor: pointer;
+  text-decoration: underline;
+  font: inherit;
+}
+
+.link-button:hover {
+  color: var(--primary-hover);
+}
+
+.data-table tr.row-highlight td {
+  background: #fef9c3;
+}
+
 .document-page {
   display: grid;
   gap: 1rem;

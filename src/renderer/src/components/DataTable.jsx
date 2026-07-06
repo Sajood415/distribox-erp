@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 
-export default function DataTable({ columns, data, onEdit, onDelete, searchPlaceholder = "Search...", showActions = true }) {
+export default function DataTable({ columns, data, onEdit, onDelete, searchPlaceholder = "Search...", showActions = true, highlightRowId = null }) {
   const [sorting, setSorting] = useState([]);
   const [globalFilter, setGlobalFilter] = useState("");
 
@@ -79,7 +79,10 @@ export default function DataTable({ columns, data, onEdit, onDelete, searchPlace
               </tr>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <tr key={row.id}>
+                <tr
+                  key={row.id}
+                  className={highlightRowId != null && row.original.id === highlightRowId ? "row-highlight" : ""}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
                   ))}

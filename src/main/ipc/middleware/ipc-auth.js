@@ -38,6 +38,7 @@ const SCALAR_PAYLOAD_CHANNELS = {
   "sales:loadslips:deliver": "id",
   "sales:returns:invoice": "id",
   "sales:recoveries:outstanding": "customerId",
+  "purchase:payments:outstanding": "vendorId",
   "sales:customer:outstanding": "customerId",
   "inventory:stocktake:sheet": "warehouseId",
   "tools:export:csv": "entity",

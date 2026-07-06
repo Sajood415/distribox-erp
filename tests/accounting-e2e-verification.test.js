@@ -60,6 +60,7 @@ describe("Accounting E2E Verification", () => {
   let roundMoney;
 
   let customerId;
+  let vendorId;
   let salesInvoiceId;
 
   beforeAll(async () => {
@@ -133,7 +134,7 @@ describe("Accounting E2E Verification", () => {
     });
 
     const vendorRes = await saveVendor({ code: "VEND01", name: "Supplier One" });
-    const vendorId = vendorRes.data.id;
+    vendorId = vendorRes.data.id;
 
     const purchaseRes = await savePurchaseInvoice({
       date,
@@ -325,5 +326,65 @@ describe("Accounting E2E Verification", () => {
       46750,
       roundMoney(customer.creditLimit - breakdown.outstanding)
     );
+  });
+
+  it("verifies sub-ledgers match outstanding and running balances", async () => {
+    const { getCustomerLedger, getSupplierLedger } = await import("../src/main/services/sub-ledger-service.js");
+    const { buildCustomerLedgerRows } = await import("../src/main/domain/customer-ledger.js");
+    const { buildVendorLedgerRows } = await import("../src/main/domain/vendor-ledger.js");
+    const { applyRunningBalance } = await import("../src/main/domain/ledger-shared.js");
+    const { getVendorOutstanding } = await import("../src/main/domain/vendor-outstanding.js");
+
+    const custLedger = await getCustomerLedger({
+      customerId,
+      startDate: "2000-01-01",
+      endDate: "2099-12-31",
+    });
+    expect(custLedger.success, custLedger.error).toBe(true);
+    const custOutstanding = await getCustomerOutstanding(state.prisma, customerId);
+
+    assertMetric("Sub-Ledger", "Customer closing balance", custOutstanding, custLedger.data.closingBalance);
+    assertMetric("Sub-Ledger", "Customer operational outstanding", custOutstanding, custLedger.data.operationalOutstanding);
+    record("Sub-Ledger", "Customer ledger reconciled", true, custLedger.data.matchesOutstanding, custLedger.data.matchesOutstanding);
+    expect(custLedger.data.matchesOutstanding).toBe(true);
+
+    const custRows = await buildCustomerLedgerRows(state.prisma, customerId);
+    const custWithBalance = applyRunningBalance(custRows, { liability: false });
+    let custRunning = 0;
+    for (const row of custWithBalance) {
+      custRunning = roundMoney(custRunning + row.debit - row.credit);
+      expect(row.balance, `Customer ${row.reference}`).toBe(custRunning);
+    }
+    assertMetric("Sub-Ledger", "Customer full-history closing", custOutstanding, custRunning);
+
+    for (const row of custLedger.data.rows) {
+      expect(row.route, row.reference).toBeTruthy();
+    }
+
+    const supLedger = await getSupplierLedger({
+      vendorId,
+      startDate: "2000-01-01",
+      endDate: "2099-12-31",
+    });
+    expect(supLedger.success, supLedger.error).toBe(true);
+    const supOutstanding = await getVendorOutstanding(state.prisma, vendorId);
+
+    assertMetric("Sub-Ledger", "Supplier closing balance", supOutstanding, supLedger.data.closingBalance);
+    assertMetric("Sub-Ledger", "Supplier operational outstanding", supOutstanding, supLedger.data.operationalOutstanding);
+    record("Sub-Ledger", "Supplier ledger reconciled", true, supLedger.data.matchesOutstanding, supLedger.data.matchesOutstanding);
+    expect(supLedger.data.matchesOutstanding).toBe(true);
+
+    const supRows = await buildVendorLedgerRows(state.prisma, vendorId);
+    const supWithBalance = applyRunningBalance(supRows, { liability: true });
+    let supRunning = 0;
+    for (const row of supWithBalance) {
+      supRunning = roundMoney(supRunning + row.credit - row.debit);
+      expect(row.balance, `Supplier ${row.reference}`).toBe(supRunning);
+    }
+    assertMetric("Sub-Ledger", "Supplier full-history closing", supOutstanding, supRunning);
+
+    for (const row of supLedger.data.rows) {
+      expect(row.route, row.reference).toBeTruthy();
+    }
   });
 });

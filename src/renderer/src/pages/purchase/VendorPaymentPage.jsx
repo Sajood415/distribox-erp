@@ -4,24 +4,24 @@ import useDocIdHighlight from "../../hooks/useDocIdHighlight";
 import { todayInputValue } from "../../utils/purchase";
 
 const listColumns = [
-  { accessorKey: "number", header: "Recovery #" },
+  { accessorKey: "number", header: "Payment #" },
   {
     accessorKey: "date",
     header: "Date",
     cell: ({ row }) => new Date(row.original.date).toLocaleDateString(),
   },
   {
-    accessorKey: "customer",
-    header: "Customer",
-    cell: ({ row }) => row.original.customer?.name ?? "-",
+    accessorKey: "vendor",
+    header: "Supplier",
+    cell: ({ row }) => row.original.vendor?.name ?? "-",
   },
   { accessorKey: "amount", header: "Amount" },
   { accessorKey: "paymentMode", header: "Mode" },
 ];
 
-export default function RecoveryPage() {
+export default function VendorPaymentPage() {
   const highlightRowId = useDocIdHighlight();
-  const [lookups, setLookups] = useState({ customers: [], salesmen: [], deliveryMen: [] });
+  const [lookups, setLookups] = useState({ vendors: [] });
   const [rows, setRows] = useState([]);
   const [outstanding, setOutstanding] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,9 +29,7 @@ export default function RecoveryPage() {
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     date: todayInputValue(),
-    customerId: "",
-    salesmanId: "",
-    deliveryManId: "",
+    vendorId: "",
     paymentMode: "Cash",
     remarks: "",
     allocations: {},
@@ -39,8 +37,8 @@ export default function RecoveryPage() {
 
   async function loadData() {
     const [lookupResult, listResult] = await Promise.all([
-      window.api.sales.lookups(),
-      window.api.sales.listRecoveries(),
+      window.api.purchase.lookups(),
+      window.api.purchase.listPayments(),
     ]);
     if (lookupResult.success) setLookups(lookupResult.data);
     if (listResult.success) setRows(listResult.data);
@@ -53,18 +51,18 @@ export default function RecoveryPage() {
 
   useEffect(() => {
     async function loadOutstanding() {
-      if (!form.customerId) {
+      if (!form.vendorId) {
         setOutstanding([]);
         return;
       }
-      const result = await window.api.sales.getOutstandingInvoices(Number(form.customerId));
+      const result = await window.api.purchase.getOutstandingInvoices(Number(form.vendorId));
       if (result.success) {
         setOutstanding(result.data);
         setForm((current) => ({ ...current, allocations: {} }));
       }
     }
     loadOutstanding();
-  }, [form.customerId]);
+  }, [form.vendorId]);
 
   const totalAllocated = Object.values(form.allocations).reduce(
     (sum, value) => sum + (Number(value) || 0),
@@ -85,17 +83,14 @@ export default function RecoveryPage() {
 
     const items = Object.entries(form.allocations)
       .filter(([, amount]) => Number(amount) > 0)
-      .map(([salesInvoiceId, amount]) => ({
-        salesInvoiceId: Number(salesInvoiceId),
+      .map(([purchaseInvoiceId, amount]) => ({
+        purchaseInvoiceId: Number(purchaseInvoiceId),
         amount: Number(amount),
       }));
 
-    const result = await window.api.sales.saveRecovery({
+    const result = await window.api.purchase.savePayment({
       ...form,
-      customerId: Number(form.customerId),
-      salesmanId: form.salesmanId ? Number(form.salesmanId) : null,
-      deliveryManId: form.deliveryManId ? Number(form.deliveryManId) : null,
-      amount: totalAllocated,
+      vendorId: Number(form.vendorId),
       items,
     });
 
@@ -107,9 +102,7 @@ export default function RecoveryPage() {
 
     setForm({
       date: todayInputValue(),
-      customerId: "",
-      salesmanId: "",
-      deliveryManId: "",
+      vendorId: "",
       paymentMode: "Cash",
       remarks: "",
       allocations: {},
@@ -121,8 +114,8 @@ export default function RecoveryPage() {
     <div className="master-page">
       <div className="page-header">
         <div>
-          <h2>Daily Recovery</h2>
-          <p>Collect customer payments and reduce receivables</p>
+          <h2>Supplier Payments</h2>
+          <p>Pay suppliers and reduce accounts payable</p>
         </div>
       </div>
 
@@ -133,16 +126,16 @@ export default function RecoveryPage() {
             <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
           </label>
           <label>
-            Customer
+            Supplier
             <select
-              value={form.customerId}
-              onChange={(e) => setForm({ ...form, customerId: e.target.value })}
+              value={form.vendorId}
+              onChange={(e) => setForm({ ...form, vendorId: e.target.value })}
               required
             >
-              <option value="">Select customer</option>
-              {lookups.customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.name}
+              <option value="">Select supplier</option>
+              {lookups.vendors.map((vendor) => (
+                <option key={vendor.id} value={vendor.id}>
+                  {vendor.name}
                 </option>
               ))}
             </select>
@@ -157,32 +150,18 @@ export default function RecoveryPage() {
               <option value="Bank">Bank</option>
             </select>
           </label>
-          <label>
-            Collector
-            <select
-              value={form.salesmanId}
-              onChange={(e) => setForm({ ...form, salesmanId: e.target.value })}
-            >
-              <option value="">Optional</option>
-              {lookups.salesmen.map((salesman) => (
-                <option key={salesman.id} value={salesman.id}>
-                  {salesman.name}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
 
         {outstanding.length > 0 && (
           <div className="allocation-table-wrap">
-            <h3>Outstanding Invoices</h3>
+            <h3>Outstanding Purchase Invoices</h3>
             <table className="data-table">
               <thead>
                 <tr>
                   <th>Invoice</th>
                   <th>Date</th>
                   <th>Outstanding</th>
-                  <th>Apply Amount</th>
+                  <th>Pay Amount</th>
                 </tr>
               </thead>
               <tbody>
@@ -205,27 +184,27 @@ export default function RecoveryPage() {
                 ))}
               </tbody>
             </table>
-            <p className="hint-text">Total recovery: {totalAllocated.toFixed(2)}</p>
+            <p className="hint-text">Total payment: {totalAllocated.toFixed(2)}</p>
           </div>
         )}
 
-        {error && <p className="error-text">{error}</p>}
+        {error ? <p className="error-text">{error}</p> : null}
 
         <div className="document-actions">
           <button type="submit" disabled={saving || totalAllocated <= 0}>
-            {saving ? "Saving..." : "Save Recovery"}
+            {saving ? "Saving..." : "Save Payment"}
           </button>
         </div>
       </form>
 
       {loading ? (
-        <p>Loading recoveries...</p>
+        <p>Loading payments...</p>
       ) : (
         <DataTable
           columns={listColumns}
           data={rows}
           showActions={false}
-          searchPlaceholder="Search recoveries..."
+          searchPlaceholder="Search payments..."
           highlightRowId={highlightRowId}
         />
       )}

@@ -148,6 +148,7 @@ model PurchaseInvoice {
   paidAmount  Float          @default(0)
   remarks     String?
   items       PurchaseItem[]
+  paymentItems VendorPaymentItem[]
   claims      Claim[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
@@ -506,7 +507,30 @@ model Vendor {
   updatedAt        DateTime          @updatedAt
   purchaseInvoices PurchaseInvoice[]
   purchaseReturns  PurchaseReturn[]
+  vendorPayments   VendorPaymentVoucher[]
   claims           Claim[]
+}
+
+model VendorPaymentVoucher {
+  id          Int                 @id @default(autoincrement())
+  number      String              @unique
+  date        DateTime
+  vendorId    Int
+  vendor      Vendor              @relation(fields: [vendorId], references: [id])
+  paymentMode String              @default("Cash")
+  amount      Float
+  remarks     String?
+  items       VendorPaymentItem[]
+  createdAt   DateTime            @default(now())
+}
+
+model VendorPaymentItem {
+  id                    Int                  @id @default(autoincrement())
+  vendorPaymentVoucherId Int
+  vendorPaymentVoucher  VendorPaymentVoucher @relation(fields: [vendorPaymentVoucherId], references: [id], onDelete: Cascade)
+  purchaseInvoiceId     Int
+  purchaseInvoice       PurchaseInvoice      @relation(fields: [purchaseInvoiceId], references: [id])
+  amount                Float
 }
 
 model StockAdjustment {

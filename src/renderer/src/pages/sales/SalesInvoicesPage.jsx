@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import DataTable from "../../components/DataTable";
+import useDocIdHighlight from "../../hooks/useDocIdHighlight";
 
 const columns = [
   { accessorKey: "number", header: "Invoice #" },
@@ -32,6 +33,7 @@ const columns = [
 ];
 
 export default function SalesInvoicesPage() {
+  const highlightRowId = useDocIdHighlight();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -62,7 +64,13 @@ export default function SalesInvoicesPage() {
       {loading ? (
         <p>Loading...</p>
       ) : (
-        <DataTable columns={columns} data={rows} showActions={false} searchPlaceholder="Search sales..." />
+        <DataTable
+          columns={columns}
+          data={rows}
+          showActions={false}
+          searchPlaceholder="Search sales..."
+          highlightRowId={highlightRowId}
+        />
       )}
     </div>
   );
