@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import useKeyboardShortcuts from "../../hooks/useKeyboardShortcuts";
+import GlobalSearchBar from "../GlobalSearchBar";
 
 const navGroups = [
   {
@@ -26,6 +27,7 @@ const navGroups = [
       { to: "/purchase/invoices", label: "Purchase Invoices" },
       { to: "/purchase/invoices/new", label: "New Purchase" },
       { to: "/purchase/returns", label: "Purchase Returns" },
+      { to: "/purchase/orders", label: "Purchase Orders" },
       { to: "/purchase/payments", label: "Supplier Payments" },
     ],
   },
@@ -51,6 +53,7 @@ const navGroups = [
       { to: "/sales/invoices", label: "Sales Invoices" },
       { to: "/sales/invoices/new", label: "New Sales Invoice" },
       { to: "/sales/recovery", label: "Recovery" },
+      { to: "/sales/offers", label: "Trade Offers" },
       { to: "/sales/load-slips", label: "Load Slips" },
     ],
   },
@@ -74,7 +77,11 @@ const navGroups = [
       { to: "/reports/customer-statement", label: "Statement of Account" },
       { to: "/reports/supplier-ledger", label: "Supplier Ledger" },
       { to: "/reports/supplier-statement", label: "Supplier Statement" },
-      { to: "/reports/outstanding-statement", label: "Outstanding Statement" },
+      { to: "/reports/daily-recovery", label: "Daily Recovery" },
+      { to: "/reports/daily-cash", label: "Daily Cash" },
+      { to: "/reports/daily-final-sheet", label: "Daily Final Sheet" },
+      { to: "/reports/salesman-targets", label: "Salesman Targets" },
+      { to: "/reports/routes", label: "Route Reports" },
       { to: "/reports/salesmen", label: "Salesman Reports" },
       { to: "/reports/products", label: "Product Reports" },
       { to: "/reports/purchases", label: "Purchase Report" },
@@ -138,6 +145,7 @@ export default function AppLayout() {
             <span>{user?.role}</span>
           </div>
           <div className="header-actions">
+            <GlobalSearchBar />
             <NavLink to="/company" className="secondary-link">
               Switch Company
             </NavLink>

@@ -16,6 +16,7 @@ import PurchaseInvoicesPage from "./pages/purchase/PurchaseInvoicesPage";
 import PurchaseInvoiceFormPage from "./pages/purchase/PurchaseInvoiceFormPage";
 import PurchaseReturnsPage from "./pages/purchase/PurchaseReturnsPage";
 import VendorPaymentPage from "./pages/purchase/VendorPaymentPage";
+import PurchaseOrdersPage from "./pages/purchase/PurchaseOrdersPage";
 import StockPage from "./pages/inventory/StockPage";
 import OpeningStockPage from "./pages/inventory/OpeningStockPage";
 import StockTakePage from "./pages/inventory/StockTakePage";
@@ -31,6 +32,7 @@ import QuotationsPage from "./pages/sales/QuotationsPage";
 import SalesInvoicesPage from "./pages/sales/SalesInvoicesPage";
 import SalesInvoiceFormPage from "./pages/sales/SalesInvoiceFormPage";
 import RecoveryPage from "./pages/sales/RecoveryPage";
+import TradeOffersPage from "./pages/sales/TradeOffersPage";
 import LoadSlipsPage from "./pages/sales/LoadSlipsPage";
 import VouchersPage from "./pages/accounting/VouchersPage";
 import VoucherFormPage from "./pages/accounting/VoucherFormPage";
@@ -53,6 +55,11 @@ import SupplierLedgerPage from "./pages/reports/SupplierLedgerPage";
 import OutstandingStatementPage from "./pages/reports/OutstandingStatementPage";
 import CustomerStatementPage from "./pages/reports/CustomerStatementPage";
 import SupplierStatementPage from "./pages/reports/SupplierStatementPage";
+import DailyRecoveryReportsPage from "./pages/reports/DailyRecoveryReportsPage";
+import DailyCashPage from "./pages/reports/DailyCashPage";
+import DailyFinalSheetPage from "./pages/reports/DailyFinalSheetPage";
+import SalesmanTargetsPage from "./pages/reports/SalesmanTargetsPage";
+import RouteReportsPage from "./pages/reports/RouteReportsPage";
 import DatabaseHealthPage from "./pages/tools/DatabaseHealthPage";
 import ToolsHubPage from "./pages/tools/ToolsHubPage";
 import BackupPage from "./pages/tools/BackupPage";
@@ -112,6 +119,7 @@ function AppRoutes() {
         <Route path="purchase/invoices/new" element={<PurchaseInvoiceFormPage />} />
         <Route path="purchase/returns" element={<PurchaseReturnsPage />} />
         <Route path="purchase/payments" element={<VendorPaymentPage />} />
+        <Route path="purchase/orders" element={<PurchaseOrdersPage />} />
         <Route path="inventory/stock" element={<StockPage />} />
         <Route path="inventory/opening-stock" element={<OpeningStockPage />} />
         <Route path="inventory/stock-take" element={<StockTakePage />} />
@@ -128,6 +136,7 @@ function AppRoutes() {
         <Route path="sales/invoices" element={<SalesInvoicesPage />} />
         <Route path="sales/invoices/new" element={<SalesInvoiceFormPage />} />
         <Route path="sales/recovery" element={<RecoveryPage />} />
+        <Route path="sales/offers" element={<TradeOffersPage />} />
         <Route path="sales/load-slips" element={<LoadSlipsPage />} />
         <Route path="accounting/vouchers" element={<VouchersPage />} />
         <Route path="accounting/vouchers/new" element={<VoucherFormPage />} />
@@ -150,6 +159,11 @@ function AppRoutes() {
         <Route path="reports/outstanding-statement" element={<OutstandingStatementPage />} />
         <Route path="reports/customer-statement" element={<CustomerStatementPage />} />
         <Route path="reports/supplier-statement" element={<SupplierStatementPage />} />
+        <Route path="reports/daily-recovery" element={<DailyRecoveryReportsPage />} />
+        <Route path="reports/daily-cash" element={<DailyCashPage />} />
+        <Route path="reports/daily-final-sheet" element={<DailyFinalSheetPage />} />
+        <Route path="reports/salesman-targets" element={<SalesmanTargetsPage />} />
+        <Route path="reports/routes" element={<RouteReportsPage />} />
         <Route path="tools" element={<ToolsHubPage />} />
         <Route path="tools/backup" element={<BackupPage />} />
         <Route path="tools/database-health" element={<DatabaseHealthPage />} />

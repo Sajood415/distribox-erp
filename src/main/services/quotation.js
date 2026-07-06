@@ -48,7 +48,7 @@ async function nextNumber(tx, model, prefixCode) {
 
 export async function getSalesLookups() {
   const prisma = getCompanyPrisma();
-  const [customers, products, warehouses, units, salesmen, deliveryMen] = await Promise.all([
+  const [customers, products, warehouses, units, salesmen, deliveryMen, routes] = await Promise.all([
     prisma.customer.findMany({ orderBy: { name: "asc" }, include: { salesman: true } }),
     prisma.product.findMany({
       where: { active: true },
@@ -59,8 +59,9 @@ export async function getSalesLookups() {
     prisma.unit.findMany({ orderBy: { name: "asc" } }),
     prisma.salesman.findMany({ orderBy: { name: "asc" } }),
     prisma.deliveryMan.findMany({ orderBy: { name: "asc" } }),
+    prisma.route.findMany({ orderBy: { name: "asc" } }),
   ]);
-  return success({ customers, products, warehouses, units, salesmen, deliveryMen });
+  return success({ customers, products, warehouses, units, salesmen, deliveryMen, routes });
 }
 
 export async function listQuotations() {

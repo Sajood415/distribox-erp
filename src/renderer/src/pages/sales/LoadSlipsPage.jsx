@@ -10,10 +10,16 @@ const slipColumns = [
     cell: ({ row }) => new Date(row.original.date).toLocaleDateString(),
   },
   {
+    accessorKey: "salesman",
+    header: "Salesman",
+    cell: ({ row }) => row.original.salesman?.name ?? "-",
+  },
+  {
     accessorKey: "deliveryMan",
     header: "Delivery Man",
     cell: ({ row }) => row.original.deliveryMan?.name ?? "-",
   },
+  { accessorKey: "vehicleNo", header: "Vehicle" },
   {
     accessorKey: "invoices",
     header: "Invoices",
@@ -22,8 +28,15 @@ const slipColumns = [
   { accessorKey: "status", header: "Status" },
 ];
 
+const STATUS_FLOW = {
+  Draft: "Loaded",
+  Loaded: "In Transit",
+  "In Transit": "Delivered",
+  Delivered: "Closed",
+};
+
 export default function LoadSlipsPage() {
-  const [lookups, setLookups] = useState({ deliveryMen: [] });
+  const [lookups, setLookups] = useState({ deliveryMen: [], salesmen: [], routes: [] });
   const [pending, setPending] = useState([]);
   const [slips, setSlips] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -33,6 +46,9 @@ export default function LoadSlipsPage() {
   const [form, setForm] = useState({
     date: todayInputValue(),
     deliveryManId: "",
+    salesmanId: "",
+    routeId: "",
+    vehicleNo: "",
     remarks: "",
   });
 
@@ -42,7 +58,13 @@ export default function LoadSlipsPage() {
       window.api.sales.listPendingDeliveries(),
       window.api.sales.listLoadSlips(),
     ]);
-    if (lookupResult.success) setLookups(lookupResult.data);
+    if (lookupResult.success) {
+      setLookups({
+        deliveryMen: lookupResult.data.deliveryMen,
+        salesmen: lookupResult.data.salesmen,
+        routes: lookupResult.data.routes || [],
+      });
+    }
     if (pendingResult.success) setPending(pendingResult.data);
     if (slipResult.success) setSlips(slipResult.data);
     setLoading(false);
@@ -66,6 +88,8 @@ export default function LoadSlipsPage() {
     const result = await window.api.sales.saveLoadSlip({
       ...form,
       deliveryManId: Number(form.deliveryManId),
+      salesmanId: form.salesmanId ? Number(form.salesmanId) : null,
+      routeId: form.routeId ? Number(form.routeId) : null,
       invoiceIds: selectedIds,
     });
 
@@ -79,8 +103,14 @@ export default function LoadSlipsPage() {
     await loadData();
   }
 
-  async function handleDeliver(id) {
-    const result = await window.api.sales.deliverLoadSlip(id);
+  async function advanceStatus(slip) {
+    const nextStatus = STATUS_FLOW[slip.status];
+    if (!nextStatus) return;
+
+    const result = await window.api.sales.updateLoadSlipStatus({
+      id: slip.id,
+      status: nextStatus,
+    });
     if (!result.success) {
       setError(result.error);
       return;
@@ -93,7 +123,7 @@ export default function LoadSlipsPage() {
       <div className="page-header">
         <div>
           <h2>Load Slips</h2>
-          <p>Group sales invoices for delivery routes</p>
+          <p>Draft → Loaded → In Transit → Delivered → Closed</p>
         </div>
       </div>
 
@@ -102,6 +132,20 @@ export default function LoadSlipsPage() {
           <label>
             Date
             <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+          </label>
+          <label>
+            Salesman
+            <select
+              value={form.salesmanId}
+              onChange={(e) => setForm({ ...form, salesmanId: e.target.value })}
+            >
+              <option value="">Select salesman</option>
+              {lookups.salesmen.map((man) => (
+                <option key={man.id} value={man.id}>
+                  {man.name}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             Delivery Man
@@ -117,6 +161,26 @@ export default function LoadSlipsPage() {
                 </option>
               ))}
             </select>
+          </label>
+          <label>
+            Route
+            <select value={form.routeId} onChange={(e) => setForm({ ...form, routeId: e.target.value })}>
+              <option value="">Select route</option>
+              {lookups.routes.map((route) => (
+                <option key={route.id} value={route.id}>
+                  {route.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Vehicle No
+            <input
+              type="text"
+              value={form.vehicleNo}
+              onChange={(e) => setForm({ ...form, vehicleNo: e.target.value })}
+              placeholder="ABC-123"
+            />
           </label>
         </div>
 
@@ -156,10 +220,10 @@ export default function LoadSlipsPage() {
           <DataTable columns={slipColumns} data={slips} showActions={false} searchPlaceholder="Search load slips..." />
           <div className="table-extra-actions">
             {slips
-              .filter((slip) => slip.status === "Pending")
+              .filter((slip) => STATUS_FLOW[slip.status])
               .map((slip) => (
-                <button key={slip.id} type="button" className="secondary" onClick={() => handleDeliver(slip.id)}>
-                  Mark {slip.number} Delivered
+                <button key={slip.id} type="button" className="secondary" onClick={() => advanceStatus(slip)}>
+                  {slip.number}: Mark {STATUS_FLOW[slip.status]}
                 </button>
               ))}
           </div>

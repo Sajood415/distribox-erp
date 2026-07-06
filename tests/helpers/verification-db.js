@@ -6,7 +6,6 @@ import { PrismaClient } from "@prisma/company-client";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..", "..");
-const DB_PATH = join(ROOT, "prisma", "verify-e2e.db");
 
 let prisma = null;
 
@@ -14,7 +13,8 @@ export function getTestPrisma() {
   return prisma;
 }
 
-export async function setupVerificationDatabase(onPrismaReady) {
+export async function setupVerificationDatabase(onPrismaReady, dbFileName = "verify-e2e.db") {
+  const DB_PATH = join(ROOT, "prisma", dbFileName);
   const dataDir = dirname(DB_PATH);
   if (!existsSync(dataDir)) mkdirSync(dataDir, { recursive: true });
   if (existsSync(DB_PATH)) unlinkSync(DB_PATH);

@@ -4,6 +4,7 @@ import { increaseStock, issueStockFIFO } from "./stock";
 import { calcAdjustmentValue, postStockAdjustmentJournal } from "./inventory-accounting";
 import { recordStockMovement } from "../domain/stock-movement-recorder";
 import { STOCK_MOVEMENT_TYPES } from "../core/stock-movement-types";
+import { getStockQuantity, getStockValuation } from "../domain/stock-quantity";
 
 function success(data) {
   return { success: true, data };
@@ -25,30 +26,20 @@ async function nextNumber(tx, model, prefixCode) {
 }
 
 async function getSystemQty(tx, productId, warehouseId) {
-  const rows = await tx.stock.findMany({
-    where: { productId, warehouseId },
-  });
-  return roundMoney(rows.reduce((sum, row) => sum + row.quantity, 0));
+  return getStockQuantity(tx, { productId, warehouseId });
 }
 
 async function getAverageCost(tx, productId, warehouseId) {
   const product = await tx.product.findUnique({ where: { id: productId } });
-  const rows = await tx.stock.findMany({
-    where: { productId, warehouseId, quantity: { gt: 0 } },
-  });
-  if (rows.length === 0) {
+  const { quantity, value } = await getStockValuation(tx, { productId, warehouseId });
+  if (quantity <= 0) {
     return product?.costPrice || 0;
   }
-  const totalQty = rows.reduce((sum, row) => sum + row.quantity, 0);
-  const totalValue = rows.reduce((sum, row) => sum + row.quantity * row.costPerUnit, 0);
-  return totalQty > 0 ? roundMoney(totalValue / totalQty) : product?.costPrice || 0;
+  return roundMoney(value / quantity);
 }
 
 async function setProductWarehouseQty(tx, { productId, warehouseId, targetQty, batchNo, costPerUnit }) {
-  const existingRows = await tx.stock.findMany({
-    where: { productId, warehouseId },
-  });
-  const currentQty = existingRows.reduce((sum, row) => sum + row.quantity, 0);
+  const currentQty = await getStockQuantity(tx, { productId, warehouseId });
   const delta = roundMoney(targetQty - currentQty);
 
   if (delta === 0) {
@@ -463,8 +454,7 @@ export async function getLowStockReport() {
 
   const report = [];
   for (const product of products) {
-    const rows = await prisma.stock.findMany({ where: { productId: product.id } });
-    const onHand = roundMoney(rows.reduce((sum, row) => sum + row.quantity, 0));
+    const onHand = await getStockQuantity(prisma, { productId: product.id });
     if (onHand <= product.reorderLevel) {
       report.push({
         productId: product.id,

@@ -7,6 +7,8 @@ import { saveSalesReturn } from "./sales-return";
 import { recordStockMovement } from "../domain/stock-movement-recorder";
 import { STOCK_MOVEMENT_TYPES } from "../core/stock-movement-types";
 import { SOURCE_DOCUMENT_TYPES } from "../core/account-roles";
+import { logOperation } from "./operation-log";
+import { EVENT_TYPES } from "./event-service";
 
 function success(data) {
   return { success: true, data };
@@ -14,6 +16,20 @@ function success(data) {
 
 function failure(error) {
   return { success: false, error };
+}
+
+async function logClaimSettled(prisma, claim, resolution) {
+  await prisma.$transaction(async (tx) => {
+    await logOperation(tx, {
+      table: "Claim",
+      recordId: claim.id,
+      action: "SETTLE",
+      eventType: EVENT_TYPES.SETTLED,
+      entityType: "CLAIM",
+      referenceNumber: claim.number,
+      message: `Claim ${claim.number} settled as ${resolution}`,
+    });
+  });
 }
 
 export const CLAIM_TYPES = ["Damage", "Expiry", "Shortage", "Other"];
@@ -204,11 +220,27 @@ export async function updateClaimStatus(payload) {
     return failure("Claim cannot be rejected");
   }
 
-  const updated = await prisma.claim.update({
-    where: { id },
-    data: { status },
-  });
-  return success(updated);
+  try {
+    const updated = await prisma.$transaction(async (tx) => {
+      const row = await tx.claim.update({
+        where: { id },
+        data: { status },
+      });
+      await logOperation(tx, {
+        table: "Claim",
+        recordId: row.id,
+        action: status.toUpperCase(),
+        eventType: status === "Rejected" ? EVENT_TYPES.VOIDED : EVENT_TYPES.APPROVED,
+        entityType: "CLAIM",
+        referenceNumber: row.number,
+        message: `Claim ${row.number} ${status.toLowerCase()}`,
+      });
+      return row;
+    });
+    return success(updated);
+  } catch (error) {
+    return failure(error.message || "Failed to update claim status");
+  }
 }
 
 export async function settleClaim(payload) {
@@ -261,6 +293,7 @@ export async function settleClaim(payload) {
           data: { status: "Settled", resolution },
           include: { salesReturn: true, items: { include: { product: true } } },
         });
+        await logClaimSettled(prisma, updated, resolution);
         return success(updated);
       }
 
@@ -303,6 +336,7 @@ export async function settleClaim(payload) {
           data: { status: "Settled", resolution },
           include: { items: { include: { product: true } } },
         });
+        await logClaimSettled(prisma, updated, resolution);
         return success(updated);
       }
 
@@ -341,6 +375,7 @@ export async function settleClaim(payload) {
           data: { status: "Settled", resolution },
           include: { items: { include: { product: true } } },
         });
+        await logClaimSettled(prisma, updated, resolution);
         return success(updated);
       }
     }
@@ -374,6 +409,7 @@ export async function settleClaim(payload) {
         },
         include: { purchaseReturn: true, items: { include: { product: true } } },
       });
+      await logClaimSettled(prisma, updated, resolution);
       return success(updated);
     }
 

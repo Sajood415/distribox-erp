@@ -13,6 +13,8 @@ import {
   buildCustomerOutstandingBreakdown,
   normalizeSaleItems,
 } from "./quotation";
+import { DOCUMENT_TYPES } from "../core/document-types";
+import { onDocumentCreated, onDocumentPosted } from "./document-lifecycle-service";
 
 function success(data) {
   return { success: true, data };
@@ -186,6 +188,13 @@ export async function saveSalesInvoice(payload) {
         });
       }
 
+      await onDocumentCreated(tx, {
+        documentType: DOCUMENT_TYPES.SALES_INVOICE,
+        documentId: invoice.id,
+        documentNumber: invoice.number,
+        lifecycleStatus: "Draft",
+      });
+
       await postSalesJournal(tx, invoice);
 
       for (const issue of stockIssues) {
@@ -205,6 +214,13 @@ export async function saveSalesInvoice(payload) {
           });
         }
       }
+
+      await onDocumentPosted(tx, {
+        documentType: DOCUMENT_TYPES.SALES_INVOICE,
+        documentId: invoice.id,
+        documentNumber: invoice.number,
+        postedAt: invoice.date,
+      });
 
       return invoice;
     });

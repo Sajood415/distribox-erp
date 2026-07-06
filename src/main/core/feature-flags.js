@@ -1,19 +1,40 @@
 /**
- * Phase 10 feature flags. Flip after migration + verification.
- * Company settings may override in future sub-phases.
+ * Phase 10 feature flags.
  *
  * LOCKED MODULES (do not modify without verified bug):
- * - Sub-Ledgers: customer-ledger.js, vendor-ledger.js, customer-outstanding.js,
+ *
+ * Accounting Core — posting-engine.js, journal flows
+ *
+ * Sub-Ledgers — customer-ledger.js, vendor-ledger.js, customer-outstanding.js,
  *   vendor-outstanding.js, sub-ledger-service.js
- * - Stock Ledger: stock-movement-recorder.js, stock-ledger-service.js, stock-quantity.js
- * - All party balances must use getCustomerOutstanding / getVendorOutstanding /
- *   getInvoiceOutstanding / getPurchaseInvoiceOutstanding — no duplicate formulas.
- * - All stock history/valuation must use stock-ledger-service / stock-quantity — no duplicate qty formulas.
+ *   Party balances: getCustomerOutstanding / getVendorOutstanding /
+ *   getInvoiceOutstanding / getPurchaseInvoiceOutstanding only
+ *
+ * Stock Ledger — stock-movement-recorder.js, stock-quantity.js, stock-ledger-shared.js,
+ *   stock-ledger-service.js, StockMovement table
+ *   Rules:
+ *   1. Every stock-changing transaction MUST call recordStockMovement
+ *   2. No direct running-stock calculations outside stock-ledger-service
+ *   3. No direct inventory valuation outside stock-quantity.js
+ *   4. Product qty from getStockQuantity; valuation from getStockValuation
+ *   5. Ledgers/stock card via stock-ledger-service only
+ *   6. Future modules (offers, load slips, production, expiry, transfers) use recorder only
+ *
+ * Distributor Operations (Phase 10.5) — verified by business-smoke-verification.test.js
+ *   purchase-order.js, trade-offer-engine.js, trade-offer.js, load-slip.js,
+ *   distributor-reports.js, salesman-target.js, expense.js (daily cash portion),
+ *   claims.js (workflow: approve/reject/settle + audit), GlobalSearchBar + globalSearch
+ *   Rules:
+ *   1. PO receive is qty-tracking only; stock posts on purchase invoice conversion
+ *   2. Trade offer discounts are percentage-based for invoice lines
+ *   3. Load slips are logistics only — no stock impact
+ *   4. Outstanding/valuation/stock via locked domain services only
  */
 export const FLAGS = {
   ENABLE_SUBLEDGERS: true,
   ENABLE_STOCK_LEDGER: true,
-  ENABLE_DOCUMENT_REVERSAL: process.env.ENABLE_DOCUMENT_REVERSAL === "true",
+  ENABLE_DISTRIBUTOR_OPS: true,
+  ENABLE_DOCUMENT_REVERSAL: process.env.ENABLE_DOCUMENT_REVERSAL !== "false",
   ENABLE_PERIOD_LOCKING: process.env.ENABLE_PERIOD_LOCKING === "true",
 };
 

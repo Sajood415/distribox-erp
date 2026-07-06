@@ -1,3 +1,11 @@
+export async function findJournalEntryBySource(tx, { sourceDocumentType, sourceDocumentId }) {
+  return tx.journalEntry.findFirst({
+    where: { sourceDocumentType, sourceDocumentId },
+    include: { lines: true },
+    orderBy: { id: "desc" },
+  });
+}
+
 export async function createJournalEntry(tx, data) {
   return tx.journalEntry.create({
     data: {

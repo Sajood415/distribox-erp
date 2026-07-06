@@ -6,6 +6,8 @@ import { getPurchaseInvoiceOutstanding } from "../domain/vendor-outstanding";
 import { recordStockMovement } from "../domain/stock-movement-recorder";
 import { STOCK_MOVEMENT_TYPES } from "../core/stock-movement-types";
 import { SOURCE_DOCUMENT_TYPES } from "../core/account-roles";
+import { DOCUMENT_TYPES } from "../core/document-types";
+import { onDocumentCreated, onDocumentPosted } from "./document-lifecycle-service";
 
 function success(data) {
   return { success: true, data };
@@ -143,6 +145,7 @@ export async function savePurchaseInvoice(payload) {
           total,
           paidAmount,
           remarks: payload.remarks?.trim() || null,
+          purchaseOrderId: payload.purchaseOrderId ? Number(payload.purchaseOrderId) : null,
           items: {
             create: items.map((item) => ({
               productId: item.productId,
@@ -192,7 +195,24 @@ export async function savePurchaseInvoice(payload) {
         });
       }
 
+      await onDocumentCreated(tx, {
+        documentType: DOCUMENT_TYPES.PURCHASE_INVOICE,
+        documentId: invoice.id,
+        documentNumber: invoice.number,
+        lifecycleStatus: "Draft",
+        parentDocumentType: payload.purchaseOrderId ? DOCUMENT_TYPES.PURCHASE_ORDER : null,
+        parentDocumentId: payload.purchaseOrderId ? Number(payload.purchaseOrderId) : null,
+      });
+
       await postPurchaseJournal(tx, invoice);
+
+      await onDocumentPosted(tx, {
+        documentType: DOCUMENT_TYPES.PURCHASE_INVOICE,
+        documentId: invoice.id,
+        documentNumber: invoice.number,
+        postedAt: invoice.date,
+      });
+
       return invoice;
     });
 

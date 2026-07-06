@@ -2,6 +2,8 @@ import { getCompanyPrisma } from "../db/init";
 import { roundMoney } from "../utils/money";
 import { postRecoveryJournal } from "./accounting";
 import { getInvoiceOutstanding } from "../domain/customer-outstanding";
+import { DOCUMENT_TYPES } from "../core/document-types";
+import { onDocumentCreated, onDocumentPosted } from "./document-lifecycle-service";
 
 function success(data) {
   return { success: true, data };
@@ -127,7 +129,22 @@ export async function saveRecovery(payload) {
         include: { items: true },
       });
 
+      await onDocumentCreated(tx, {
+        documentType: DOCUMENT_TYPES.RECOVERY,
+        documentId: recovery.id,
+        documentNumber: recovery.number,
+        lifecycleStatus: "Draft",
+      });
+
       await postRecoveryJournal(tx, recovery);
+
+      await onDocumentPosted(tx, {
+        documentType: DOCUMENT_TYPES.RECOVERY,
+        documentId: recovery.id,
+        documentNumber: recovery.number,
+        postedAt: recovery.date,
+      });
+
       return recovery;
     });
 

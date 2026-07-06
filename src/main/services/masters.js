@@ -122,13 +122,19 @@ export async function deleteAccount(id) {
 
 export async function listRoutes() {
   const prisma = getCompanyPrisma();
-  const data = await prisma.route.findMany({ orderBy: { name: "asc" } });
+  const data = await prisma.route.findMany({
+    orderBy: { name: "asc" },
+    include: { salesman: true, _count: { select: { customers: true } } },
+  });
   return success(data);
 }
 
 export async function saveRoute(payload) {
   const prisma = getCompanyPrisma();
-  const data = { name: payload.name?.trim() };
+  const data = {
+    name: payload.name?.trim(),
+    salesmanId: payload.salesmanId ? Number(payload.salesmanId) : null,
+  };
 
   if (payload.id) {
     const updated = await prisma.route.update({ where: { id: payload.id }, data });

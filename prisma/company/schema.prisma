@@ -16,6 +16,7 @@ model Unit {
   updatedAt       DateTime         @updatedAt
   products        Product[]
   purchaseItems   PurchaseItem[]
+  purchaseOrderItems PurchaseOrderItem[]
   quotationItems  QuotationItem[]
   salesItems      SalesItem[]
 }
@@ -29,6 +30,7 @@ model Warehouse {
   stock             Stock[]
   stockMovements    StockMovement[]
   purchaseInvoices  PurchaseInvoice[]
+  purchaseOrders    PurchaseOrder[]
   purchaseReturns   PurchaseReturn[]
   salesInvoices     SalesInvoice[]
   salesReturns      SalesReturn[]
@@ -55,11 +57,14 @@ model Account {
 }
 
 model Route {
-  id        Int        @id @default(autoincrement())
-  name      String
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  customers Customer[]
+  id         Int        @id @default(autoincrement())
+  name       String
+  salesmanId Int?
+  salesman   Salesman?  @relation(fields: [salesmanId], references: [id])
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  customers  Customer[]
+  loadSlips  LoadSlip[]
 }
 
 model Salesman {
@@ -69,10 +74,13 @@ model Salesman {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   customers        Customer[]
+  routes           Route[]
   quotations       Quotation[]
   salesInvoices    SalesInvoice[]
   recoveryVouchers RecoveryVoucher[]
   claims           Claim[]
+  loadSlips        LoadSlip[]
+  targets          SalesmanTarget[]
 }
 
 model DeliveryMan {
@@ -109,6 +117,7 @@ model Product {
   stock               Stock[]
   stockMovements      StockMovement[]
   purchaseItems       PurchaseItem[]
+  purchaseOrderItems  PurchaseOrderItem[]
   purchaseReturnItems PurchaseReturnItem[]
   quotationItems      QuotationItem[]
   salesItems          SalesItem[]
@@ -116,6 +125,8 @@ model Product {
   claimItems          ClaimItem[]
   stockAdjustments    StockAdjustment[]
   stockTransferItems  StockTransferItem[]
+  tradeOffers         TradeOffer[]
+  loadSlipItems       LoadSlipItem[]
 }
 
 model Stock {
@@ -163,13 +174,15 @@ model StockMovement {
 }
 
 model PurchaseInvoice {
-  id          Int            @id @default(autoincrement())
-  number      String         @unique
-  date        DateTime
-  vendorId    Int
-  vendor      Vendor         @relation(fields: [vendorId], references: [id])
-  warehouseId Int
-  warehouse   Warehouse      @relation(fields: [warehouseId], references: [id])
+  id              Int            @id @default(autoincrement())
+  number          String         @unique
+  date            DateTime
+  vendorId        Int
+  vendor          Vendor         @relation(fields: [vendorId], references: [id])
+  warehouseId     Int
+  warehouse       Warehouse      @relation(fields: [warehouseId], references: [id])
+  purchaseOrderId Int?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
   isCredit    Boolean        @default(true)
   freight     Float          @default(0)
   taxTotal    Float          @default(0)
@@ -177,6 +190,19 @@ model PurchaseInvoice {
   total       Float          @default(0)
   paidAmount  Float          @default(0)
   remarks     String?
+  lifecycleStatus    String    @default("Posted")
+  createdBy          Int?
+  postedBy           Int?
+  postedAt           DateTime?
+  cancelledBy        Int?
+  cancelledAt        DateTime?
+  reversedBy         Int?
+  reversedAt         DateTime?
+  lifecycleReason    String?
+  parentDocumentType String?
+  parentDocumentId   Int?
+  childDocumentType  String?
+  childDocumentId    Int?
   items       PurchaseItem[]
   paymentItems VendorPaymentItem[]
   claims      Claim[]
@@ -215,6 +241,19 @@ model PurchaseReturn {
   taxTotal          Float                @default(0)
   total             Float                @default(0)
   remarks           String?
+  lifecycleStatus    String    @default("Posted")
+  createdBy          Int?
+  postedBy           Int?
+  postedAt           DateTime?
+  cancelledBy        Int?
+  cancelledAt        DateTime?
+  reversedBy         Int?
+  reversedAt         DateTime?
+  lifecycleReason    String?
+  parentDocumentType String?
+  parentDocumentId   Int?
+  childDocumentType  String?
+  childDocumentId    Int?
   items             PurchaseReturnItem[]
   claim             Claim?
   createdAt         DateTime             @default(now())
@@ -307,6 +346,7 @@ model Customer {
   recoveryVouchers RecoveryVoucher[]
   salesReturns     SalesReturn[]
   claims           Claim[]
+  tradeOffers      TradeOffer[]
 }
 
 model Quotation {
@@ -322,6 +362,19 @@ model Quotation {
   taxTotal     Float           @default(0)
   total        Float           @default(0)
   status       String          @default("Open")
+  lifecycleStatus String       @default("Draft")
+  createdBy    Int?
+  postedBy     Int?
+  postedAt     DateTime?
+  cancelledBy  Int?
+  cancelledAt  DateTime?
+  reversedBy   Int?
+  reversedAt   DateTime?
+  lifecycleReason String?
+  parentDocumentType String?
+  parentDocumentId   Int?
+  childDocumentType  String?
+  childDocumentId    Int?
   remarks      String?
   items        QuotationItem[]
   salesInvoice SalesInvoice?
@@ -369,6 +422,19 @@ model SalesInvoice {
   paidAmount    Float           @default(0)
   cogsTotal     Float           @default(0)
   status        String          @default("Posted")
+  lifecycleStatus String          @default("Posted")
+  createdBy       Int?
+  postedBy        Int?
+  postedAt        DateTime?
+  cancelledBy     Int?
+  cancelledAt     DateTime?
+  reversedBy      Int?
+  reversedAt      DateTime?
+  lifecycleReason String?
+  parentDocumentType String?
+  parentDocumentId   Int?
+  childDocumentType  String?
+  childDocumentId    Int?
   remarks       String?
   items         SalesItem[]
   recoveryItems RecoveryItem[]
@@ -413,6 +479,19 @@ model SalesReturn {
   total          Float             @default(0)
   cogsTotal      Float             @default(0)
   remarks        String?
+  lifecycleStatus String        @default("Posted")
+  createdBy      Int?
+  postedBy       Int?
+  postedAt       DateTime?
+  cancelledBy    Int?
+  cancelledAt    DateTime?
+  reversedBy     Int?
+  reversedAt     DateTime?
+  lifecycleReason String?
+  parentDocumentType String?
+  parentDocumentId   Int?
+  childDocumentType  String?
+  childDocumentId    Int?
   items          SalesReturnItem[]
   createdAt      DateTime          @default(now())
 }
@@ -458,6 +537,19 @@ model Claim {
   taxTotal          Float            @default(0)
   total             Float            @default(0)
   remarks           String?
+  lifecycleStatus    String    @default("Draft")
+  createdBy          Int?
+  postedBy           Int?
+  postedAt           DateTime?
+  cancelledBy        Int?
+  cancelledAt        DateTime?
+  reversedBy         Int?
+  reversedAt         DateTime?
+  lifecycleReason    String?
+  parentDocumentType String?
+  parentDocumentId   Int?
+  childDocumentType  String?
+  childDocumentId    Int?
   items             ClaimItem[]
   salesReturn       SalesReturn?
   purchaseReturnId  Int?             @unique
@@ -495,6 +587,19 @@ model RecoveryVoucher {
   paymentMode   String         @default("Cash")
   amount        Float
   remarks       String?
+  lifecycleStatus String @default("Posted")
+  createdBy     Int?
+  postedBy      Int?
+  postedAt      DateTime?
+  cancelledBy   Int?
+  cancelledAt   DateTime?
+  reversedBy    Int?
+  reversedAt    DateTime?
+  lifecycleReason String?
+  parentDocumentType String?
+  parentDocumentId   Int?
+  childDocumentType  String?
+  childDocumentId    Int?
   items         RecoveryItem[]
   createdAt     DateTime       @default(now())
 }
@@ -512,13 +617,157 @@ model LoadSlip {
   id            Int            @id @default(autoincrement())
   number        String         @unique
   date          DateTime
+  salesmanId    Int?
+  salesman      Salesman?      @relation(fields: [salesmanId], references: [id])
   deliveryManId Int
   deliveryMan   DeliveryMan    @relation(fields: [deliveryManId], references: [id])
-  status        String         @default("Pending")
+  routeId       Int?
+  route         Route?         @relation(fields: [routeId], references: [id])
+  vehicleNo     String?
+  status        String         @default("Draft")
+  lifecycleStatus String       @default("Draft")
+  createdBy     Int?
+  postedBy      Int?
+  postedAt      DateTime?
+  cancelledBy   Int?
+  cancelledAt   DateTime?
+  reversedBy    Int?
+  reversedAt    DateTime?
+  lifecycleReason String?
+  parentDocumentType String?
+  parentDocumentId   Int?
+  childDocumentType  String?
+  childDocumentId    Int?
   remarks       String?
   invoices      SalesInvoice[]
+  items         LoadSlipItem[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+}
+
+model LoadSlipItem {
+  id             Int      @id @default(autoincrement())
+  loadSlipId     Int
+  loadSlip       LoadSlip @relation(fields: [loadSlipId], references: [id], onDelete: Cascade)
+  productId      Int
+  product        Product  @relation(fields: [productId], references: [id])
+  unitId         Int
+  loadedQty      Float    @default(0)
+  deliveredQty   Float    @default(0)
+  returnedQty    Float    @default(0)
+  shortQty       Float    @default(0)
+  damageQty      Float    @default(0)
+}
+
+model PurchaseOrder {
+  id          Int                 @id @default(autoincrement())
+  number      String              @unique
+  date        DateTime
+  vendorId    Int
+  vendor      Vendor              @relation(fields: [vendorId], references: [id])
+  warehouseId Int
+  warehouse   Warehouse           @relation(fields: [warehouseId], references: [id])
+  status      String              @default("Draft")
+  subtotal    Float               @default(0)
+  taxTotal    Float               @default(0)
+  total       Float               @default(0)
+  remarks     String?
+  lifecycleStatus    String    @default("Draft")
+  createdBy          Int?
+  postedBy           Int?
+  postedAt           DateTime?
+  cancelledBy        Int?
+  cancelledAt        DateTime?
+  reversedBy         Int?
+  reversedAt         DateTime?
+  lifecycleReason    String?
+  parentDocumentType String?
+  parentDocumentId   Int?
+  childDocumentType  String?
+  childDocumentId    Int?
+  items       PurchaseOrderItem[]
+  invoices    PurchaseInvoice[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+}
+
+model PurchaseOrderItem {
+  id              Int           @id @default(autoincrement())
+  purchaseOrderId Int
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  productId       Int
+  product         Product       @relation(fields: [productId], references: [id])
+  unitId          Int
+  unit            Unit          @relation(fields: [unitId], references: [id])
+  quantity        Float
+  receivedQty     Float         @default(0)
+  price           Float
+  discount        Float         @default(0)
+  vatPercent      Float         @default(0)
+  lineTotal       Float
+}
+
+model TradeOffer {
+  id              Int       @id @default(autoincrement())
+  code            String    @unique
+  name            String
+  offerType       String
+  priority        Int       @default(100)
+  startDate       DateTime
+  endDate         DateTime
+  active          Boolean   @default(true)
+  customerId      Int?
+  customer        Customer? @relation(fields: [customerId], references: [id])
+  productId       Int?
+  product         Product?  @relation(fields: [productId], references: [id])
+  category        String?
+  buyQuantity     Float?
+  getQuantity     Float?
+  discountPercent Float?
+  discountAmount  Float?
+  freeProductId   Int?
+  freeQuantity    Float?
+  slabsJson       String?
+  remarks         String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model SalesmanTarget {
+  id             Int      @id @default(autoincrement())
+  salesmanId     Int
+  salesman       Salesman @relation(fields: [salesmanId], references: [id])
+  year           Int
+  month          Int
+  salesTarget    Float    @default(0)
+  recoveryTarget Float    @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([salesmanId, year, month])
+}
+
+model ExpenseVoucher {
+  id          Int      @id @default(autoincrement())
+  number      String   @unique
+  date        DateTime
+  amount      Float
+  paymentMode String   @default("Cash")
+  description String?
+  lifecycleStatus String @default("Posted")
+  createdBy   Int?
+  postedBy    Int?
+  postedAt    DateTime?
+  cancelledBy Int?
+  cancelledAt DateTime?
+  reversedBy  Int?
+  reversedAt  DateTime?
+  lifecycleReason String?
+  parentDocumentType String?
+  parentDocumentId   Int?
+  childDocumentType  String?
+  childDocumentId    Int?
+  createdAt   DateTime @default(now())
 }
 
 model Vendor {
@@ -539,6 +788,7 @@ model Vendor {
   purchaseReturns  PurchaseReturn[]
   vendorPayments   VendorPaymentVoucher[]
   claims           Claim[]
+  purchaseOrders   PurchaseOrder[]
 }
 
 model VendorPaymentVoucher {
@@ -579,6 +829,19 @@ model StockAdjustment {
   costPerUnit    Float     @default(0)
   valueChange    Float     @default(0)
   reason         String?
+  lifecycleStatus String @default("Posted")
+  createdBy      Int?
+  postedBy       Int?
+  postedAt       DateTime?
+  cancelledBy    Int?
+  cancelledAt    DateTime?
+  reversedBy     Int?
+  reversedAt     DateTime?
+  lifecycleReason String?
+  parentDocumentType String?
+  parentDocumentId   Int?
+  childDocumentType  String?
+  childDocumentId    Int?
   createdAt      DateTime  @default(now())
 }
 
@@ -603,6 +866,25 @@ model StockTransferItem {
   product         Product       @relation(fields: [productId], references: [id])
   batchNo         String?
   quantity        Float
+}
+
+model DocumentLifecycleEvent {
+  id                 Int      @id @default(autoincrement())
+  documentType       String
+  documentId         Int
+  documentNumber     String?
+  status             String
+  action             String
+  reason             String?
+  performedBy        Int?
+  performedAt        DateTime @default(now())
+  parentDocumentType String?
+  parentDocumentId   Int?
+  childDocumentType  String?
+  childDocumentId    Int?
+
+  @@index([documentType, documentId])
+  @@index([performedAt])
 }
 
 model CompanyAuditLog {

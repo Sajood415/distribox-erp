@@ -60,11 +60,52 @@ import {
 } from "../services/sales";
 import { listRecoveries, saveRecovery, getCustomerOutstandingInvoices } from "../services/recovery";
 import {
+  listPurchaseOrders,
+  getPurchaseOrder,
+  savePurchaseOrder,
+  deletePurchaseOrder,
+  approvePurchaseOrder,
+  cancelPurchaseOrder,
+  receivePurchaseOrder,
+  convertPurchaseOrderToInvoice,
+} from "../services/purchase-order";
+import {
+  listTradeOffers,
+  saveTradeOffer,
+  previewInvoiceOffers,
+} from "../services/trade-offer";
+import {
+  getDailyRecoverySheet,
+  getRecoveryBySalesman,
+  getRecoveryByCustomer,
+  getPendingRecoveryReport,
+  getRecoveryPerformance,
+  getRecoveryAgingReport,
+  getRouteReport,
+  getDailyRouteSummary,
+  getDailyCashSummary,
+  getDailyFinalSheet,
+  globalSearch,
+} from "../services/distributor-reports";
+import {
+  getDocumentTimeline,
+  assertDocumentEditable,
+} from "../services/document-lifecycle-service";
+import {
+  reverseDocument,
+  reverseSalesInvoice,
+  reversePurchaseInvoice,
+  reverseRecoveryVoucher,
+} from "../services/document-reversal-service";
+import { listSalesmanTargets, saveSalesmanTarget, getSalesmanPerformance } from "../services/salesman-target";
+import { listExpenses, saveExpense } from "../services/expense";
+import {
   listLoadSlips,
   saveLoadSlip,
   markLoadSlipDelivered,
   listDeliveryMen,
   saveDeliveryMan,
+  updateLoadSlipStatus,
 } from "../services/load-slip";
 import {
   listSalesReturns,
@@ -199,6 +240,14 @@ export function registerIpcHandlers() {
   registerHandler(ipcMain, "purchase:payments:list", listVendorPayments);
   registerHandler(ipcMain, "purchase:payments:save", saveVendorPayment);
   registerHandler(ipcMain, "purchase:payments:outstanding", getVendorOutstandingInvoices);
+  registerHandler(ipcMain, "purchase:orders:list", listPurchaseOrders);
+  registerHandler(ipcMain, "purchase:orders:get", getPurchaseOrder);
+  registerHandler(ipcMain, "purchase:orders:save", savePurchaseOrder);
+  registerHandler(ipcMain, "purchase:orders:delete", deletePurchaseOrder);
+  registerHandler(ipcMain, "purchase:orders:approve", approvePurchaseOrder);
+  registerHandler(ipcMain, "purchase:orders:cancel", cancelPurchaseOrder);
+  registerHandler(ipcMain, "purchase:orders:receive", receivePurchaseOrder);
+  registerHandler(ipcMain, "purchase:orders:convert", convertPurchaseOrderToInvoice);
 
   registerHandler(ipcMain, "stock:list", listStock);
 
@@ -226,6 +275,7 @@ export function registerIpcHandlers() {
   registerHandler(ipcMain, "sales:recoveries:outstanding", getCustomerOutstandingInvoices);
   registerHandler(ipcMain, "sales:loadslips:list", listLoadSlips);
   registerHandler(ipcMain, "sales:loadslips:save", saveLoadSlip);
+  registerHandler(ipcMain, "sales:loadslips:status", updateLoadSlipStatus);
   registerHandler(ipcMain, "sales:loadslips:deliver", markLoadSlipDelivered);
   registerHandler(ipcMain, "sales:deliverymen:list", listDeliveryMen);
   registerHandler(ipcMain, "sales:deliverymen:save", saveDeliveryMan);
@@ -277,6 +327,36 @@ export function registerIpcHandlers() {
   registerHandler(ipcMain, "stockledger:card", getStockCard);
   registerHandler(ipcMain, "stockledger:history", getInventoryHistory);
   registerHandler(ipcMain, "stockledger:movements", getMovementHistory);
+
+  registerHandler(ipcMain, "offers:list", listTradeOffers);
+  registerHandler(ipcMain, "offers:save", saveTradeOffer);
+  registerHandler(ipcMain, "offers:preview", previewInvoiceOffers);
+
+  registerHandler(ipcMain, "distributor:recoverysheet", getDailyRecoverySheet);
+  registerHandler(ipcMain, "distributor:recoverysalesman", getRecoveryBySalesman);
+  registerHandler(ipcMain, "distributor:recoverycustomer", getRecoveryByCustomer);
+  registerHandler(ipcMain, "distributor:recoverypending", getPendingRecoveryReport);
+  registerHandler(ipcMain, "distributor:recoveryperformance", getRecoveryPerformance);
+  registerHandler(ipcMain, "distributor:recoveryaging", getRecoveryAgingReport);
+  registerHandler(ipcMain, "distributor:routereport", getRouteReport);
+  registerHandler(ipcMain, "distributor:routesummary", getDailyRouteSummary);
+  registerHandler(ipcMain, "distributor:dailycash", getDailyCashSummary);
+  registerHandler(ipcMain, "distributor:finalsheet", getDailyFinalSheet);
+  registerHandler(ipcMain, "distributor:search", globalSearch);
+
+  registerHandler(ipcMain, "documents:timeline", getDocumentTimeline);
+  registerHandler(ipcMain, "documents:editable", assertDocumentEditable);
+  registerHandler(ipcMain, "documents:reverse", reverseDocument);
+  registerHandler(ipcMain, "documents:reverse:sales", reverseSalesInvoice);
+  registerHandler(ipcMain, "documents:reverse:purchase", reversePurchaseInvoice);
+  registerHandler(ipcMain, "documents:reverse:recovery", reverseRecoveryVoucher);
+
+  registerHandler(ipcMain, "salesman:targets:list", listSalesmanTargets);
+  registerHandler(ipcMain, "salesman:targets:save", saveSalesmanTarget);
+  registerHandler(ipcMain, "salesman:performance", getSalesmanPerformance);
+
+  registerHandler(ipcMain, "expenses:list", listExpenses);
+  registerHandler(ipcMain, "expenses:save", saveExpense);
 
   registerHandler(
     ipcMain,

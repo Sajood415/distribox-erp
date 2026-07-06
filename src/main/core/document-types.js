@@ -1,0 +1,47 @@
+export const DOCUMENT_TYPES = {
+  PURCHASE_ORDER: "PURCHASE_ORDER",
+  PURCHASE_INVOICE: "PURCHASE_INVOICE",
+  PURCHASE_RETURN: "PURCHASE_RETURN",
+  SALES_INVOICE: "SALES_INVOICE",
+  SALES_RETURN: "SALES_RETURN",
+  RECOVERY: "RECOVERY",
+  CLAIM: "CLAIM",
+  EXPENSE: "EXPENSE",
+  STOCK_ADJUSTMENT: "STOCK_ADJUSTMENT",
+  QUOTATION: "QUOTATION",
+  LOAD_SLIP: "LOAD_SLIP",
+};
+
+export const LIFECYCLE_STATUS = {
+  DRAFT: "Draft",
+  POSTED: "Posted",
+  CANCELLED: "Cancelled",
+  VOIDED: "Voided",
+  REVERSED: "Reversed",
+  ARCHIVED: "Archived",
+};
+
+export const LIFECYCLE_ACTIONS = {
+  CREATED: "Created",
+  EDITED: "Edited",
+  POSTED: "Posted",
+  CANCELLED: "Cancelled",
+  VOIDED: "Voided",
+  REVERSED: "Reversed",
+  CORRECTED: "Corrected",
+  ARCHIVED: "Archived",
+};
+
+export const DOCUMENT_TABLES = {
+  [DOCUMENT_TYPES.PURCHASE_ORDER]: "purchaseOrder",
+  [DOCUMENT_TYPES.PURCHASE_INVOICE]: "purchaseInvoice",
+  [DOCUMENT_TYPES.PURCHASE_RETURN]: "purchaseReturn",
+  [DOCUMENT_TYPES.SALES_INVOICE]: "salesInvoice",
+  [DOCUMENT_TYPES.SALES_RETURN]: "salesReturn",
+  [DOCUMENT_TYPES.RECOVERY]: "recoveryVoucher",
+  [DOCUMENT_TYPES.CLAIM]: "claim",
+  [DOCUMENT_TYPES.EXPENSE]: "expenseVoucher",
+  [DOCUMENT_TYPES.STOCK_ADJUSTMENT]: "stockAdjustment",
+  [DOCUMENT_TYPES.QUOTATION]: "quotation",
+  [DOCUMENT_TYPES.LOAD_SLIP]: "loadSlip",
+};

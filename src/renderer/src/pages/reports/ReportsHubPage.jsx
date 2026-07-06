@@ -23,6 +23,16 @@ const reportGroups = [
     ],
   },
   {
+    title: "Distributor Operations",
+    reports: [
+      { to: "/reports/daily-recovery", label: "Daily Recovery", desc: "Recovery sheet, pending, performance, aging" },
+      { to: "/reports/daily-cash", label: "Daily Cash Position", desc: "Opening, cash sales, recovery, expenses, closing" },
+      { to: "/reports/daily-final-sheet", label: "Daily Final Sheet", desc: "End-of-day sales, recovery, cash, claims, profit" },
+      { to: "/reports/salesman-targets", label: "Salesman Targets", desc: "Monthly targets and achievement %" },
+      { to: "/reports/routes", label: "Route Reports", desc: "Route-wise sales, recovery, and outstanding" },
+    ],
+  },
+  {
     title: "Customer & Sales",
     reports: [
       { to: "/reports/customers", label: "Customer Reports", desc: "Outstanding balances, sales, recovery" },

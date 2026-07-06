@@ -9,6 +9,7 @@ import {
   sumSalesReturns,
 } from "../domain/customer-outstanding";
 import { getPurchaseInvoiceOutstanding } from "../domain/vendor-outstanding";
+import { getStockValuation } from "../domain/stock-quantity";
 import {
   findJournalLinesInRange,
   findJournalLinesCumulative,
@@ -509,6 +510,7 @@ export async function getPurchaseReport(payload = {}) {
 export async function getStockValuationReport() {
   const prisma = getCompanyPrisma();
   const stock = await prisma.stock.findMany({
+    where: { quantity: { gt: 0 } },
     include: {
       product: { include: { baseUnit: true } },
       warehouse: true,
@@ -527,10 +529,12 @@ export async function getStockValuationReport() {
     expiryDate: row.expiryDate,
   }));
 
+  const totals = await getStockValuation(prisma);
+
   return success({
     rows,
-    totalValue: roundMoney(rows.reduce((sum, row) => sum + row.value, 0)),
-    totalQuantity: roundMoney(rows.reduce((sum, row) => sum + row.quantity, 0)),
+    totalValue: totals.value,
+    totalQuantity: totals.quantity,
   });
 }
 

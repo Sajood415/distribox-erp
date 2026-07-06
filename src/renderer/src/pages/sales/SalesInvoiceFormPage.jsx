@@ -22,6 +22,8 @@ export default function SalesInvoiceFormPage() {
   const [error, setError] = useState("");
   const [creditWarning, setCreditWarning] = useState("");
   const [creditLimitPolicy, setCreditLimitPolicy] = useState("BLOCK");
+  const [offerPreview, setOfferPreview] = useState(null);
+  const [previewingOffers, setPreviewingOffers] = useState(false);
 
   const [form, setForm] = useState({
     date: todayInputValue(),
@@ -175,6 +177,45 @@ export default function SalesInvoiceFormPage() {
     await submitInvoice(false);
   }
 
+  async function previewOffers() {
+    if (!form.customerId) {
+      setError("Select a customer before previewing offers");
+      return;
+    }
+    setPreviewingOffers(true);
+    setError("");
+    const result = await window.api.offers.preview({
+      customerId: Number(form.customerId),
+      date: form.date,
+      items: form.items.map((item) => ({
+        productId: Number(item.productId),
+        quantity: Number(item.quantity),
+        freeQuantity: Number(item.freeQuantity) || 0,
+        price: Number(item.price),
+        discount: Number(item.discount) || 0,
+        vatPercent: Number(item.vatPercent) || 0,
+      })),
+    });
+    setPreviewingOffers(false);
+    if (!result.success) {
+      setError(result.error);
+      return;
+    }
+    setOfferPreview(result.data);
+    setForm((current) => ({
+      ...current,
+      items: result.data.lines.map((line) => ({
+        productId: String(line.productId),
+        unitId: String(lookups.products.find((p) => p.id === line.productId)?.baseUnitId || ""),
+        quantity: line.quantity,
+        freeQuantity: line.freeQuantity || 0,
+        price: line.price,
+        discount: line.discount || 0,
+        vatPercent: line.vatPercent || 0,
+      })),
+    }));
+  }
+
   if (loading) return <p>Loading sales form...</p>;
 
   return (
@@ -270,10 +311,18 @@ export default function SalesInvoiceFormPage() {
       <section className="document-card">
         <div className="section-toolbar">
           <h3>Line Items</h3>
-          <button type="button" className="secondary" onClick={addLine}>
-            Add Line
-          </button>
+          <div className="toolbar-actions">
+            <button type="button" className="secondary" onClick={previewOffers} disabled={previewingOffers}>
+              {previewingOffers ? "Applying..." : "Preview Trade Offers"}
+            </button>
+            <button type="button" className="secondary" onClick={addLine}>
+              Add Line
+            </button>
+          </div>
         </div>
+        {offerPreview?.appliedOfferCodes?.length > 0 && (
+          <p className="hint-text">Applied offers: {offerPreview.appliedOfferCodes.join(", ")}</p>
+        )}
         <div className="line-items-scroll">
           <table className="line-items-table">
             <thead>
