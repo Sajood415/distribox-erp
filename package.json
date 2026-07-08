@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "dist": "npm run build && electron-builder --win",
+    "dist": "npm run build && node scripts/stage-prisma-cli-deps.js && electron-builder --win",
+    "stage:prisma-cli": "node scripts/stage-prisma-cli-deps.js",
     "prebuild": "prisma generate --schema prisma/master/schema.prisma && prisma generate --schema prisma/company/schema.prisma",
     "preview": "electron-vite preview",
   "test": "vitest run",
@@ -56,21 +57,40 @@
     "appId": "com.distribox.erp",
     "productName": "Distribox ERP",
     "directories": {
-      "output": "release"
+      "output": "release5"
     },
     "files": [
       "out/**/*",
       "package.json",
-      "node_modules/**/*",
-      "!node_modules/**/{CHANGELOG.md,README.md,readme.md,test,tests,__tests__}/**"
+      "node_modules/@prisma/master-client/**/*",
+      "node_modules/@prisma/company-client/**/*",
+      "node_modules/@prisma/client/**/*",
+      "node_modules/prisma/**/*",
+      "node_modules/.prisma/**/*",
+      "node_modules/bcryptjs/**/*",
+      "node_modules/decimal.js/**/*",
+      "node_modules/uuid/**/*",
+      "node_modules/zod/**/*",
+      "node_modules/date-fns/**/*"
     ],
     "asarUnpack": [
-      "node_modules/.prisma/**",
-      "node_modules/@prisma/**/libquery_engine-*",
-      "node_modules/@prisma/**/query_engine-*",
-      "node_modules/prisma/**"
+      "node_modules/prisma/**",
+      "node_modules/@prisma/**",
+      "node_modules/.prisma/**"
     ],
     "extraResources": [
+      {
+        "from": "node_modules/@prisma/master-client",
+        "to": "prisma-clients/master-client"
+      },
+      {
+        "from": "node_modules/@prisma/company-client",
+        "to": "prisma-clients/company-client"
+      },
+      {
+        "from": "build-resources/node_modules",
+        "to": "node_modules"
+      },
       {
         "from": "prisma",
         "to": "prisma",
