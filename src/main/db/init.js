@@ -362,8 +362,11 @@ export async function connectCompanyDatabase(dbFile) {
 
   await companyPrisma.$connect();
 
-  // await applyPragmas(companyPrisma);
-  // await seedCompanyDatabase(companyPrisma);
+  startupLog("Applying company pragmas...");
+  await applyPragmas(companyPrisma);
+  startupLog("Running company seed...");
+  await seedCompanyDatabase(companyPrisma);
+  startupLog("Company seed complete");
 
   activeCompanyDb = dbFile;
   return { success: true, dbFile };
