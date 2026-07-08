@@ -25,12 +25,15 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "overrides": {
+    "@noble/hashes": "1.4.0"
+  },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.7.0",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "electron": "^41.7.0",
-    "electron-builder": "^26.8.1",
+    "electron-builder": "^24.13.3",
     "electron-vite": "^3.1.0",
     "prisma": "^6.19.3",
     "vite": "^6.4.2",
@@ -71,17 +74,17 @@
       {
         "from": "prisma",
         "to": "prisma",
-        "filter": ["**/*"]
+        "filter": [
+          "**/schema.prisma",
+          "**/migrations/**",
+          "**/migration_lock.toml"
+        ]
       }
     ],
     "win": {
       "target": [
-        "nsis"
+        "portable"
       ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
     }
   }
 }

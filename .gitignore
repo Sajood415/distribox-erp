@@ -1,9 +1,14 @@
 node_modules/
 dist/
 out/
+release/
 coverage/
 *.log
 .DS_Store
 Thumbs.db
 .env
 prisma/data/
+prisma/*.db
+prisma/verify-*.db
+prisma/debug-*.db
+prisma/test.db
