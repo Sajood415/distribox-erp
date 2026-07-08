@@ -134,6 +134,29 @@ async function databaseHasMigrationsTable(dbUrl) {
   return databaseHasTable(dbUrl, "_prisma_migrations");
 }
 
+async function repairMigrationHistory(dbUrl, clientImportPath) {
+  try {
+    const { PrismaClient } = await import(clientImportPath);
+    const client = new PrismaClient({ datasources: { db: { url: dbUrl } } });
+    const hasMigrations = await databaseHasMigrationsTable(dbUrl);
+    if (!hasMigrations) {
+      await client.$disconnect();
+      return;
+    }
+
+    await client.$executeRawUnsafe(
+      `DELETE FROM _prisma_migrations
+       WHERE finished_at IS NULL
+         AND migration_name IN (
+           SELECT migration_name FROM _prisma_migrations WHERE finished_at IS NOT NULL
+         )`
+    );
+    await client.$disconnect();
+  } catch {
+    /* best-effort repair */
+  }
+}
+
 async function bootstrapLegacyMigrations(schemaFile, dbUrl, sentinelTable) {
   const dbPath = dbUrl.replace(/^file:/, "");
   if (!existsSync(dbPath)) {
@@ -161,6 +184,7 @@ export async function initDatabase() {
   process.env.MASTER_DATABASE_URL = dbUrl;
 
   await bootstrapLegacyMigrations(MASTER_SCHEMA, dbUrl, "User");
+  await repairMigrationHistory(dbUrl, "@prisma/master-client");
   runMigrateDeploy(MASTER_SCHEMA, dbUrl);
 
   masterPrisma = new MasterPrismaClient({
@@ -184,6 +208,7 @@ export async function connectCompanyDatabase(dbFile) {
   process.env.COMPANY_DATABASE_URL = dbUrl;
 
   await bootstrapLegacyMigrations(COMPANY_SCHEMA, dbUrl, "Product");
+  await repairMigrationHistory(dbUrl, "@prisma/company-client");
   runMigrateDeploy(COMPANY_SCHEMA, dbUrl);
 
   companyPrisma = new CompanyPrismaClient({

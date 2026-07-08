@@ -185,6 +185,14 @@ contextBridge.exposeInMainWorld("api", {
     reopen: (payload) => invoke("periods:reopen", payload),
     prepareFiscalYear: (payload) => invoke("periods:preparefiscalyear", payload),
   },
+  yearClose: {
+    listFiscalYears: () => invoke("yearclose:fiscalyears"),
+    validate: (payload) => invoke("yearclose:validate", payload),
+    close: (payload) => invoke("yearclose:close", payload),
+    history: () => invoke("yearclose:history"),
+    report: (payload) => invoke("yearclose:report", payload),
+    openingBalances: (payload) => invoke("yearclose:openingbalances", payload),
+  },
   reports: {
     aging: (filters) => invoke("reports:aging", filters || {}),
     balanceSheet: (filters) => invoke("reports:balancesheet", filters || {}),

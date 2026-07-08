@@ -37,6 +37,9 @@
  * Accounting Period Locking (Phase 10.7) — fiscal-period-service.js, period-lock-service.js,
  *   period-closing-service.js, journal-repository createJournalEntry guard
  *   Rules: Posting blocked in closed periods; closing checklist enforced before close
+ *
+ * Fiscal Year Closing (Phase 10.8) — fiscal-year-close-service.js
+ *   Rules: Year-end validation, snapshot, opening balance carry-forward, irreversible close
  */
 export const FLAGS = {
   ENABLE_SUBLEDGERS: true,
@@ -44,6 +47,7 @@ export const FLAGS = {
   ENABLE_DISTRIBUTOR_OPS: true,
   ENABLE_DOCUMENT_REVERSAL: process.env.ENABLE_DOCUMENT_REVERSAL !== "false",
   ENABLE_PERIOD_LOCKING: process.env.ENABLE_PERIOD_LOCKING !== "false",
+  ENABLE_FISCAL_YEAR_CLOSE: process.env.ENABLE_FISCAL_YEAR_CLOSE !== "false",
 };
 
 export function isEnabled(flag) {

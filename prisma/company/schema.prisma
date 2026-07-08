@@ -940,8 +940,38 @@ model FiscalYear {
   startDate DateTime
   endDate   DateTime
   status    String             @default("Open")
+  closedAt  DateTime?
+  closedBy  String?
   createdAt DateTime           @default(now())
   periods   AccountingPeriod[]
+  snapshots YearCloseSnapshot[]
+}
+
+model YearCloseSnapshot {
+  id                   Int        @id @default(autoincrement())
+  fiscalYearId         Int
+  fiscalYear           FiscalYear @relation(fields: [fiscalYearId], references: [id])
+  fiscalYearName       String
+  newFiscalYearId      Int?
+  newFiscalYearName    String?
+  closedAt             DateTime   @default(now())
+  closedBy             String?
+  inventoryValuation   Float      @default(0)
+  customerOutstanding  Float      @default(0)
+  supplierOutstanding  Float      @default(0)
+  cashPosition         Float      @default(0)
+  bankPosition         Float      @default(0)
+  retainedEarnings     Float      @default(0)
+  trialBalanceJson     String
+  balanceSheetJson     String
+  incomeStatementJson  String
+  customerBalancesJson String?
+  supplierBalancesJson String?
+  glBalancesJson       String?
+  stockSnapshotJson    String?
+
+  @@index([fiscalYearId])
+  @@index([closedAt])
 }
 
 model AccountingPeriod {

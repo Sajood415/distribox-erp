@@ -132,3 +132,9 @@ export async function getPeriodById(id) {
   if (!period) return failure("Accounting period not found");
   return success(period);
 }
+
+export async function createNextFiscalYear(tx, closedFiscalYear) {
+  const nextStart = startOfDay(new Date(closedFiscalYear.endDate));
+  nextStart.setDate(nextStart.getDate() + 1);
+  return ensureFiscalYearWithPeriods(tx, nextStart);
+}

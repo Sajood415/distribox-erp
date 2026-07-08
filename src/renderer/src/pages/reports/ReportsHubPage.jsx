@@ -16,6 +16,9 @@ const reportGroups = [
     title: "Accounting Periods",
     reports: [
       { to: "/accounting/periods", label: "Period Status & Closing", desc: "Fiscal years, open/close periods, closing checklist" },
+      { to: "/accounting/year-close", label: "Fiscal Year Close", desc: "Year-end validation, close, and opening balances" },
+      { to: "/reports/year-close", label: "Year Close Report", desc: "Immutable closing trial balance and balance sheet snapshot" },
+      { to: "/reports/opening-balances", label: "Opening Balance Report", desc: "Carried-forward GL, AR, AP, cash, bank, and stock" },
       { to: "/accounting/trial-balance", label: "Trial Balance", desc: "Debit and credit account totals" },
     ],
   },

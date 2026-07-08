@@ -207,6 +207,14 @@ import {
   reopenAccountingPeriod,
   prepareCloseFiscalYear,
 } from "../services/period-closing-service";
+import {
+  runYearEndValidation,
+  closeFiscalYearComplete,
+  listYearCloseHistory,
+  getYearCloseReport,
+  getOpeningBalanceReport,
+  listFiscalYearsWithCloseHistory,
+} from "../services/fiscal-year-close-service";
 import { extractToken } from "./middleware/ipc-auth";
 
 export function registerIpcHandlers() {
@@ -322,6 +330,13 @@ export function registerIpcHandlers() {
   registerHandler(ipcMain, "periods:close", closeAccountingPeriod);
   registerHandler(ipcMain, "periods:reopen", reopenAccountingPeriod);
   registerHandler(ipcMain, "periods:preparefiscalyear", prepareCloseFiscalYear);
+
+  registerHandler(ipcMain, "yearclose:validate", runYearEndValidation);
+  registerHandler(ipcMain, "yearclose:close", closeFiscalYearComplete);
+  registerHandler(ipcMain, "yearclose:history", listYearCloseHistory);
+  registerHandler(ipcMain, "yearclose:report", getYearCloseReport);
+  registerHandler(ipcMain, "yearclose:openingbalances", getOpeningBalanceReport);
+  registerHandler(ipcMain, "yearclose:fiscalyears", listFiscalYearsWithCloseHistory);
 
   registerHandler(ipcMain, "reports:aging", getAgingReport);
   registerHandler(ipcMain, "reports:balancesheet", getBalanceSheet);

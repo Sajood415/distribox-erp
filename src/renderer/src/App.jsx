@@ -41,6 +41,7 @@ import BankbookPage from "./pages/accounting/BankbookPage";
 import TrialBalancePage from "./pages/accounting/TrialBalancePage";
 import JournalPage from "./pages/accounting/JournalPage";
 import AccountingPeriodsPage from "./pages/accounting/AccountingPeriodsPage";
+import FiscalYearClosePage from "./pages/accounting/FiscalYearClosePage";
 import ClaimsPage from "./pages/claims/ClaimsPage";
 import SalesReturnsPage from "./pages/claims/SalesReturnsPage";
 import ReportsHubPage from "./pages/reports/ReportsHubPage";
@@ -61,6 +62,8 @@ import DailyCashPage from "./pages/reports/DailyCashPage";
 import DailyFinalSheetPage from "./pages/reports/DailyFinalSheetPage";
 import SalesmanTargetsPage from "./pages/reports/SalesmanTargetsPage";
 import RouteReportsPage from "./pages/reports/RouteReportsPage";
+import YearCloseReportPage from "./pages/reports/YearCloseReportPage";
+import OpeningBalanceReportPage from "./pages/reports/OpeningBalanceReportPage";
 import DatabaseHealthPage from "./pages/tools/DatabaseHealthPage";
 import ToolsHubPage from "./pages/tools/ToolsHubPage";
 import BackupPage from "./pages/tools/BackupPage";
@@ -146,6 +149,7 @@ function AppRoutes() {
         <Route path="accounting/trial-balance" element={<TrialBalancePage />} />
         <Route path="accounting/journal" element={<JournalPage />} />
         <Route path="accounting/periods" element={<AccountingPeriodsPage />} />
+        <Route path="accounting/year-close" element={<FiscalYearClosePage />} />
         <Route path="claims" element={<ClaimsPage />} />
         <Route path="claims/sales-returns" element={<SalesReturnsPage />} />
         <Route path="reports" element={<ReportsHubPage />} />
@@ -166,6 +170,8 @@ function AppRoutes() {
         <Route path="reports/daily-final-sheet" element={<DailyFinalSheetPage />} />
         <Route path="reports/salesman-targets" element={<SalesmanTargetsPage />} />
         <Route path="reports/routes" element={<RouteReportsPage />} />
+        <Route path="reports/year-close" element={<YearCloseReportPage />} />
+        <Route path="reports/opening-balances" element={<OpeningBalanceReportPage />} />
         <Route path="tools" element={<ToolsHubPage />} />
         <Route path="tools/backup" element={<BackupPage />} />
         <Route path="tools/database-health" element={<DatabaseHealthPage />} />
