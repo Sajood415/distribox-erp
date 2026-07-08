@@ -1,5 +1,6 @@
 import { seedCompanySettings, applyRuntimeSettings } from "../services/settings-service";
 import { seedAccountMappings } from "../services/account-mapping-service";
+import { seedFiscalPeriods } from "../services/fiscal-period-service";
 
 const DEFAULT_UNITS = [
   { code: "PC", name: "Piece" },
@@ -56,5 +57,6 @@ export async function seedCompanyDatabase(prisma) {
 
   await seedCompanySettings(prisma);
   await seedAccountMappings(prisma);
+  await seedFiscalPeriods(prisma);
   await applyRuntimeSettings();
 }

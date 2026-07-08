@@ -40,6 +40,7 @@ import CashbookPage from "./pages/accounting/CashbookPage";
 import BankbookPage from "./pages/accounting/BankbookPage";
 import TrialBalancePage from "./pages/accounting/TrialBalancePage";
 import JournalPage from "./pages/accounting/JournalPage";
+import AccountingPeriodsPage from "./pages/accounting/AccountingPeriodsPage";
 import ClaimsPage from "./pages/claims/ClaimsPage";
 import SalesReturnsPage from "./pages/claims/SalesReturnsPage";
 import ReportsHubPage from "./pages/reports/ReportsHubPage";
@@ -144,6 +145,7 @@ function AppRoutes() {
         <Route path="accounting/bankbook" element={<BankbookPage />} />
         <Route path="accounting/trial-balance" element={<TrialBalancePage />} />
         <Route path="accounting/journal" element={<JournalPage />} />
+        <Route path="accounting/periods" element={<AccountingPeriodsPage />} />
         <Route path="claims" element={<ClaimsPage />} />
         <Route path="claims/sales-returns" element={<SalesReturnsPage />} />
         <Route path="reports" element={<ReportsHubPage />} />

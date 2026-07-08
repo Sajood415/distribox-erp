@@ -29,13 +29,21 @@
  *   2. Trade offer discounts are percentage-based for invoice lines
  *   3. Load slips are logistics only — no stock impact
  *   4. Outstanding/valuation/stock via locked domain services only
+ *
+ * Document Lifecycle (Phase 10.6) — document-lifecycle-service.js,
+ *   document-reversal-service.js, document-correction-service.js, document-post-service.js
+ *   Rules: Draft/Posted/Cancelled/Reversed/Archived only; posted immutable; reversal + correction
+ *
+ * Accounting Period Locking (Phase 10.7) — fiscal-period-service.js, period-lock-service.js,
+ *   period-closing-service.js, journal-repository createJournalEntry guard
+ *   Rules: Posting blocked in closed periods; closing checklist enforced before close
  */
 export const FLAGS = {
   ENABLE_SUBLEDGERS: true,
   ENABLE_STOCK_LEDGER: true,
   ENABLE_DISTRIBUTOR_OPS: true,
   ENABLE_DOCUMENT_REVERSAL: process.env.ENABLE_DOCUMENT_REVERSAL !== "false",
-  ENABLE_PERIOD_LOCKING: process.env.ENABLE_PERIOD_LOCKING === "true",
+  ENABLE_PERIOD_LOCKING: process.env.ENABLE_PERIOD_LOCKING !== "false",
 };
 
 export function isEnabled(flag) {

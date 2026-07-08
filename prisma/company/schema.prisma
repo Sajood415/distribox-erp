@@ -934,6 +934,33 @@ model CompanySetting {
   updatedAt DateTime @updatedAt
 }
 
+model FiscalYear {
+  id        Int                @id @default(autoincrement())
+  name      String             @unique
+  startDate DateTime
+  endDate   DateTime
+  status    String             @default("Open")
+  createdAt DateTime           @default(now())
+  periods   AccountingPeriod[]
+}
+
+model AccountingPeriod {
+  id           Int        @id @default(autoincrement())
+  fiscalYearId Int
+  fiscalYear   FiscalYear @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
+  month        Int
+  startDate    DateTime
+  endDate      DateTime
+  status       String     @default("Open")
+  lockedAt     DateTime?
+  lockedBy     String?
+  createdAt    DateTime   @default(now())
+
+  @@unique([fiscalYearId, month])
+  @@index([startDate, endDate])
+  @@index([status])
+}
+
 model DocumentSequence {
   documentType    String   @id
   prefix          String

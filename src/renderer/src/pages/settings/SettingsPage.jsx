@@ -21,6 +21,13 @@ const SETTING_GROUPS = [
     ],
   },
   {
+    title: "Posting Policies",
+    keys: [
+      { key: "allow_future_posting", label: "Allow Future Posting (true/false)" },
+      { key: "allow_backdated_posting", label: "Allow Backdated Posting (true/false)" },
+    ],
+  },
+  {
     title: "Tax & Pricing",
     keys: [
       { key: "pricing_mode", label: "Pricing Mode (tier / flat)" },

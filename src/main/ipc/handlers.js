@@ -197,6 +197,16 @@ import {
   listDocumentSequences,
   saveDocumentSequence,
 } from "../services/settings-service";
+import {
+  listFiscalYears,
+  listAccountingPeriods,
+} from "../services/fiscal-period-service";
+import {
+  runClosingChecklist,
+  closeAccountingPeriod,
+  reopenAccountingPeriod,
+  prepareCloseFiscalYear,
+} from "../services/period-closing-service";
 import { extractToken } from "./middleware/ipc-auth";
 
 export function registerIpcHandlers() {
@@ -305,6 +315,13 @@ export function registerIpcHandlers() {
   registerHandler(ipcMain, "accounting:ledger", getAccountLedger);
   registerHandler(ipcMain, "accounting:dailycash", getDailyCashPosition);
   registerHandler(ipcMain, "accounting:profitloss", getProfitAndLoss);
+
+  registerHandler(ipcMain, "periods:fiscalyears", listFiscalYears);
+  registerHandler(ipcMain, "periods:list", listAccountingPeriods);
+  registerHandler(ipcMain, "periods:checklist", runClosingChecklist);
+  registerHandler(ipcMain, "periods:close", closeAccountingPeriod);
+  registerHandler(ipcMain, "periods:reopen", reopenAccountingPeriod);
+  registerHandler(ipcMain, "periods:preparefiscalyear", prepareCloseFiscalYear);
 
   registerHandler(ipcMain, "reports:aging", getAgingReport);
   registerHandler(ipcMain, "reports:balancesheet", getBalanceSheet);

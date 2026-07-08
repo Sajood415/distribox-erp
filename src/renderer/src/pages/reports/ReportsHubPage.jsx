@@ -13,6 +13,13 @@ const reportGroups = [
     ],
   },
   {
+    title: "Accounting Periods",
+    reports: [
+      { to: "/accounting/periods", label: "Period Status & Closing", desc: "Fiscal years, open/close periods, closing checklist" },
+      { to: "/accounting/trial-balance", label: "Trial Balance", desc: "Debit and credit account totals" },
+    ],
+  },
+  {
     title: "Financial Statements",
     reports: [
       { to: "/reports/aging", label: "Aging Report", desc: "Customer outstanding by due-date buckets" },

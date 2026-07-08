@@ -31,6 +31,9 @@ export const SETTING_KEYS = {
   DOCUMENT_SHOW_BATCH: "document_show_batch",
   DOCUMENT_SHOW_EXPIRY: "document_show_expiry",
   INVOICE_TERMS_TEXT: "invoice_terms_text",
+
+  ALLOW_FUTURE_POSTING: "allow_future_posting",
+  ALLOW_BACKDATED_POSTING: "allow_backdated_posting",
 };
 
 export const CREDIT_LIMIT_POLICIES = {
@@ -70,6 +73,9 @@ export const DEFAULT_SETTINGS = {
   [SETTING_KEYS.DOCUMENT_SHOW_BATCH]: "true",
   [SETTING_KEYS.DOCUMENT_SHOW_EXPIRY]: "true",
   [SETTING_KEYS.INVOICE_TERMS_TEXT]: "Goods once sold will not be taken back.",
+
+  [SETTING_KEYS.ALLOW_FUTURE_POSTING]: "false",
+  [SETTING_KEYS.ALLOW_BACKDATED_POSTING]: "true",
 };
 
 export const DOCUMENT_TYPES = {

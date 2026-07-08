@@ -1,3 +1,5 @@
+import { assertPeriodOpenForPosting } from "../services/period-lock-service";
+
 export async function findJournalEntryBySource(tx, { sourceDocumentType, sourceDocumentId }) {
   return tx.journalEntry.findFirst({
     where: { sourceDocumentType, sourceDocumentId },
@@ -7,6 +9,11 @@ export async function findJournalEntryBySource(tx, { sourceDocumentType, sourceD
 }
 
 export async function createJournalEntry(tx, data) {
+  await assertPeriodOpenForPosting(tx, data.postingDate, {
+    sourceDocumentType: data.sourceDocumentType,
+    sourceDocumentId: data.sourceDocumentId,
+  });
+
   return tx.journalEntry.create({
     data: {
       referenceNumber: data.referenceNumber,

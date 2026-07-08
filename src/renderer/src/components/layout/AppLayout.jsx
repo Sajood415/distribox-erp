@@ -95,6 +95,7 @@ const navGroups = [
       { to: "/accounting/cashbook", label: "Cashbook" },
       { to: "/accounting/bankbook", label: "Bank Book" },
       { to: "/accounting/journal", label: "General Journal" },
+      { to: "/accounting/periods", label: "Accounting Periods" },
       { to: "/accounting/trial-balance", label: "Trial Balance" },
     ],
   },

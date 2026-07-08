@@ -177,6 +177,14 @@ contextBridge.exposeInMainWorld("api", {
     list: () => invoke("expenses:list"),
     save: (data) => invoke("expenses:save", data),
   },
+  periods: {
+    listFiscalYears: () => invoke("periods:fiscalyears"),
+    list: (filters) => invoke("periods:list", filters || {}),
+    closingChecklist: (payload) => invoke("periods:checklist", payload),
+    close: (payload) => invoke("periods:close", payload),
+    reopen: (payload) => invoke("periods:reopen", payload),
+    prepareFiscalYear: (payload) => invoke("periods:preparefiscalyear", payload),
+  },
   reports: {
     aging: (filters) => invoke("reports:aging", filters || {}),
     balanceSheet: (filters) => invoke("reports:balancesheet", filters || {}),
