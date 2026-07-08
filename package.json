@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
+    "dist": "npm run build && electron-builder --win",
     "prebuild": "prisma generate --schema prisma/master/schema.prisma && prisma generate --schema prisma/company/schema.prisma",
     "preview": "electron-vite preview",
   "test": "vitest run",
@@ -47,5 +48,40 @@
     "react-router-dom": "^7.15.1",
     "uuid": "^14.0.0",
     "zod": "^4.4.3"
+  },
+  "build": {
+    "appId": "com.distribox.erp",
+    "productName": "Distribox ERP",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*",
+      "package.json",
+      "node_modules/**/*",
+      "!node_modules/**/{CHANGELOG.md,README.md,readme.md,test,tests,__tests__}/**"
+    ],
+    "asarUnpack": [
+      "node_modules/.prisma/**",
+      "node_modules/@prisma/**/libquery_engine-*",
+      "node_modules/@prisma/**/query_engine-*",
+      "node_modules/prisma/**"
+    ],
+    "extraResources": [
+      {
+        "from": "prisma",
+        "to": "prisma",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

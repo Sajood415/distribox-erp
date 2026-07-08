@@ -11,8 +11,25 @@ let masterPrisma = null;
 let companyPrisma = null;
 let activeCompanyDb = null;
 
-const MASTER_SCHEMA = "prisma/master/schema.prisma";
-const COMPANY_SCHEMA = "prisma/company/schema.prisma";
+function getProjectRoot() {
+  return join(app.getAppPath());
+}
+
+function resolveSchemaPath(schemaRel) {
+  if (app.isPackaged) {
+    return join(process.resourcesPath, "prisma", schemaRel.replace(/^prisma\//, ""));
+  }
+  return join(getProjectRoot(), schemaRel);
+}
+
+function getMasterSchemaPath() {
+  return resolveSchemaPath("prisma/master/schema.prisma");
+}
+
+function getCompanySchemaPath() {
+  return resolveSchemaPath("prisma/company/schema.prisma");
+}
+
 const LEGACY_BASELINE = "20250706210000_baseline";
 
 export function getDataDir() {
@@ -59,10 +76,6 @@ export async function reconnectDatabases(companyDbFile = null) {
     await connectCompanyDatabase(companyDbFile);
   }
   return { success: true };
-}
-
-function getProjectRoot() {
-  return join(app.getAppPath());
 }
 
 function pauseSync(ms) {
@@ -183,9 +196,9 @@ export async function initDatabase() {
 
   process.env.MASTER_DATABASE_URL = dbUrl;
 
-  await bootstrapLegacyMigrations(MASTER_SCHEMA, dbUrl, "User");
+  await bootstrapLegacyMigrations(getMasterSchemaPath(), dbUrl, "User");
   await repairMigrationHistory(dbUrl, "@prisma/master-client");
-  runMigrateDeploy(MASTER_SCHEMA, dbUrl);
+  runMigrateDeploy(getMasterSchemaPath(), dbUrl);
 
   masterPrisma = new MasterPrismaClient({
     datasources: { db: { url: dbUrl } },
@@ -207,9 +220,9 @@ export async function connectCompanyDatabase(dbFile) {
 
   process.env.COMPANY_DATABASE_URL = dbUrl;
 
-  await bootstrapLegacyMigrations(COMPANY_SCHEMA, dbUrl, "Product");
+  await bootstrapLegacyMigrations(getCompanySchemaPath(), dbUrl, "Product");
   await repairMigrationHistory(dbUrl, "@prisma/company-client");
-  runMigrateDeploy(COMPANY_SCHEMA, dbUrl);
+  runMigrateDeploy(getCompanySchemaPath(), dbUrl);
 
   companyPrisma = new CompanyPrismaClient({
     datasources: { db: { url: dbUrl } },
